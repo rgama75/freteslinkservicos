@@ -9,50 +9,50 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedCotacaoRouteImport } from './routes/_authenticated/cotacao'
 
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AuthenticatedCotacaoRoute = AuthenticatedCotacaoRouteImport.update({
+  id: '/_authenticated/cotacao',
+  path: '/cotacao',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
+  '/cotacao': typeof AuthenticatedCotacaoRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
+  '/cotacao': typeof AuthenticatedCotacaoRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
+  '/_authenticated/cotacao': typeof AuthenticatedCotacaoRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/cotacao'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/cotacao'
+  id: '__root__' | '/_authenticated/cotacao'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
+  AuthenticatedCotacaoRoute: typeof AuthenticatedCotacaoRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/_authenticated/cotacao': {
+      id: '/_authenticated/cotacao'
+      path: '/cotacao'
+      fullPath: '/cotacao'
+      preLoaderRoute: typeof AuthenticatedCotacaoRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
+  AuthenticatedCotacaoRoute: AuthenticatedCotacaoRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
