@@ -155,14 +155,14 @@ function LoginPage() {
 
   if (verificando) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-canvas">
+      <main className="flex min-h-screen items-center justify-center bg-background">
         <Loader2 className="size-6 animate-spin text-accent" aria-label="Carregando" />
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-canvas">
+    <main className="min-h-screen bg-background">
       <div
         className="h-2.5 opacity-90"
         style={{
@@ -180,7 +180,7 @@ function LoginPage() {
           </p>
         </div>
 
-        <section className="mt-4 rounded-[10px] border border-line bg-panel p-6 shadow-panel">
+        <section className="mt-4 rounded-[10px] border border-line bg-panel p-6">
           <div className="flex items-center gap-2">
             <LockKeyhole className="size-4 text-accent" />
             <h2 className="text-xs font-bold tracking-[1px] text-ink uppercase">
@@ -274,7 +274,7 @@ function LoginPage() {
             type="button"
             onClick={entrarComGoogle}
             disabled={carregando}
-            className="flex w-full items-center justify-center gap-2 rounded-[7px] border border-line bg-canvas px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-accent disabled:opacity-60"
+            className="flex w-full items-center justify-center gap-2 rounded-[7px] border border-line bg-background px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-accent disabled:opacity-60"
           >
             <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
               <path
@@ -301,7 +301,7 @@ function LoginPage() {
             {modo === "login" ? "Não tem conta?" : "Já possui conta?"}{" "}
             <button
               type="button"
-              className="font-semibold text-accent-strong underline-offset-2 hover:underline"
+              className="font-semibold text-accent-dark underline-offset-2 hover:underline"
               onClick={() => setModo(modo === "login" ? "cadastro" : "login")}
             >
               {modo === "login" ? "Criar agora" : "Fazer login"}
