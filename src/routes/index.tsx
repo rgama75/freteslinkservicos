@@ -8,7 +8,7 @@ import {
   PESO,
   UFS,
   cardVazio,
-  cardVazio,
+
   cardsVazios,
   gerarId,
   geraisVazio,
