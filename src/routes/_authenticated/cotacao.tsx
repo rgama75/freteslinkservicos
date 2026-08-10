@@ -196,14 +196,24 @@ function Index() {
       />
       <div className="bg-panel py-4">
         <div className="mx-auto max-w-[1440px] px-6">
-          <header className="rounded-[10px] bg-gradient-to-b from-navy to-navy-2 px-6 py-3">
-            <h1 className="text-[17px] font-bold tracking-[0.2px] text-primary-foreground">
-              Sistema de Precificação de Fretes — Transporte Rodoviário de Cargas
-            </h1>
-            <p className="mt-1 text-xs text-primary-foreground/70">
-              Cotação simultânea para 5, 6, 7 e 9 eixos · piso ANTT calculado ·
-              impostos · viabilidade · margem operacional
-            </p>
+          <header className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] bg-gradient-to-b from-navy to-navy-2 px-6 py-3">
+            <div>
+              <h1 className="text-[17px] font-bold tracking-[0.2px] text-primary-foreground">
+                Sistema de Precificação de Fretes — Transporte Rodoviário de Cargas
+              </h1>
+              <p className="mt-1 text-xs text-primary-foreground/70">
+                Cotação simultânea para 5, 6, 7 e 9 eixos · piso ANTT calculado ·
+                impostos · viabilidade · margem operacional
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={sair}
+              className="flex items-center gap-1.5 rounded-[7px] border border-primary-foreground/25 px-3 py-1.5 text-xs font-semibold text-primary-foreground transition-colors hover:bg-primary-foreground/10"
+            >
+              <LogOut className="size-3.5" />
+              Sair
+            </button>
           </header>
         </div>
       </div>
