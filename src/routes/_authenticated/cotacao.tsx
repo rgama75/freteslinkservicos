@@ -1,7 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, Plus, Save, Trash2 } from "lucide-react";
+import { ClipboardList, LogOut, Plus, Save, Trash2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+
 import { FreightCard } from "@/components/FreightCard";
 import {
   ANTT_COEF,
