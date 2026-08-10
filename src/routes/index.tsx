@@ -1,24 +1,574 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
+import { FreightCard } from "@/components/FreightCard";
+import {
+  ANTT_COEF,
+  EIXOS_LIST,
+  PESO,
+  UFS,
+  brl,
+  cardVazio,
+  cardsVazios,
+  gerarId,
+  geraisVazio,
+  getCotacoes,
+  maskMoney,
+  setCotacoes,
+  type Cotacao,
+  type DadosCard,
+  type DadosGerais,
+  type TipoCarga,
+} from "@/lib/pricing";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-// No head() here: the home route inherits title/description/og/twitter from
-// __root.tsx, and ships no og:image so serve-time hosting can inject the
-// project's social preview (explicit og:image or latest screenshot).
 export const Route = createFileRoute("/")({
+  head: () => ({
+    meta: [
+      { title: "Precificação de Fretes | Cotação Rodoviária 5, 6, 7 e 9 Eixos" },
+      {
+        name: "description",
+        content:
+          "Calcule fretes rodoviários com piso ANTT, impostos, pedágio, viabilidade e margem operacional para 5, 6, 7 e 9 eixos.",
+      },
+      {
+        property: "og:title",
+        content: "Precificação de Fretes | Cotação Rodoviária",
+      },
+      {
+        property: "og:description",
+        content:
+          "Cotação simultânea para 5, 6, 7 e 9 eixos com piso ANTT calculado, impostos, viabilidade e margem operacional.",
+      },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary_large_image" },
+    ],
+  }),
   component: Index,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+const fieldCls =
+  "w-full rounded-[7px] border border-line bg-panel px-2.5 py-2 text-sm text-ink focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent";
+const labelCls = "mb-1.5 block text-xs font-semibold text-ink-soft";
+
+function Panel({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
+    <section className="mt-[22px] rounded-xl border border-line bg-panel px-[22px] py-5">
+      <h2 className="mb-4 text-[15px] font-bold uppercase tracking-[0.06em] text-ink-soft">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+function Index() {
+  const [gerais, setGerais] = useState<DadosGerais>(geraisVazio);
+  const [cards, setCards] = useState<Record<number, DadosCard>>(cardsVazios);
+  const [lista, setLista] = useState<Cotacao[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [confirm, setConfirm] = useState<{
+    msg: string;
+    action: () => void;
+  } | null>(null);
+  const [filtros, setFiltros] = useState({
+    cliente: "",
+    origem: "",
+    destino: "",
+    data: "",
+  });
+
+  useEffect(() => {
+    setLista(getCotacoes());
+  }, []);
+
+  const setG = (patch: Partial<DadosGerais>) =>
+    setGerais((prev) => ({ ...prev, ...patch }));
+
+  const salvar = () => {
+    if (!gerais.cliente.trim()) {
+      toast.warning("Informe o Nome do Cliente antes de salvar.");
+      return;
+    }
+    const nova: Cotacao = {
+      id: gerarId(),
+      salvoEm: new Date().toISOString(),
+      gerais,
+      cards,
+    };
+    const atual = [nova, ...getCotacoes()];
+    if (setCotacoes(atual)) {
+      setLista(atual);
+      toast.success("Cotação salva com sucesso.");
+    } else {
+      toast.error("Não foi possível salvar (armazenamento indisponível).");
+    }
+  };
+
+  const novaCotacao = () =>
+    setConfirm({
+      msg: "Isso vai apagar todos os campos preenchidos e começar uma cotação em branco. Deseja continuar?",
+      action: () => {
+        setGerais(geraisVazio());
+        setCards(cardsVazios());
+        toast.success("Nova cotação pronta para preenchimento.");
+      },
+    });
+
+  const carregar = (c: Cotacao) => {
+    setGerais({ ...geraisVazio(), ...c.gerais });
+    setCards(
+      Object.fromEntries(
+        EIXOS_LIST.map((e) => [e, { ...cardVazio(), ...(c.cards[e] ?? {}) }]),
+      ),
+    );
+    setModalOpen(false);
+    toast.success("Cotação carregada.");
+  };
+
+  const apagar = (c: Cotacao) =>
+    setConfirm({
+      msg: `Tem certeza que deseja apagar a cotação de "${c.gerais.cliente || "esta cotação"}"? Essa ação não pode ser desfeita.`,
+      action: () => {
+        const atual = getCotacoes().filter((x) => x.id !== c.id);
+        if (setCotacoes(atual)) {
+          setLista(atual);
+          toast.success("Cotação apagada.");
+        } else {
+          toast.error("Não foi possível apagar a cotação.");
+        }
+      },
+    });
+
+  const filtrada = useMemo(
+    () =>
+      lista.filter((item) => {
+        const g = item.gerais;
+        const f = filtros;
+        if (f.cliente && !(g.cliente || "").toLowerCase().includes(f.cliente.toLowerCase()))
+          return false;
+        if (f.origem && !(g.origem || "").toLowerCase().includes(f.origem.toLowerCase()))
+          return false;
+        if (
+          f.destino &&
+          !(g.destino || "").toLowerCase().includes(f.destino.toLowerCase())
+        )
+          return false;
+        if (f.data) {
+          const datas = Object.values(item.cards).map((c) => c.data);
+          if (!datas.includes(f.data)) return false;
+        }
+        return true;
+      }),
+    [lista, filtros],
+  );
+
+  return (
+    <div className="min-h-screen bg-background">
+      <div
+        className="h-2.5 opacity-90"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)",
+        }}
       />
+      <div className="bg-panel py-4">
+        <div className="mx-auto max-w-[1440px] px-6">
+          <header className="rounded-[10px] bg-gradient-to-b from-navy to-navy-2 px-6 py-3">
+            <h1 className="text-[17px] font-bold tracking-[0.2px] text-primary-foreground">
+              Sistema de Precificação de Fretes — Transporte Rodoviário de Cargas
+            </h1>
+            <p className="mt-1 text-xs text-primary-foreground/70">
+              Cotação simultânea para 5, 6, 7 e 9 eixos · piso ANTT calculado ·
+              impostos · viabilidade · margem operacional
+            </p>
+          </header>
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-[1440px] px-6 pb-15">
+        <Panel title="Dados da Cotação (aplicam-se aos 4 cards)">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-x-4 gap-y-3.5">
+            <div>
+              <label className={labelCls}>Nome do Cliente</label>
+              <input
+                className={fieldCls}
+                placeholder="Ex.: Distribuidora ABC Ltda"
+                value={gerais.cliente}
+                onChange={(e) => setG({ cliente: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Origem</label>
+              <input
+                className={fieldCls}
+                placeholder="Ex.: Belo Horizonte"
+                value={gerais.origem}
+                onChange={(e) => setG({ origem: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>UF Origem</label>
+              <select
+                className={fieldCls}
+                value={gerais.ufOrigem}
+                onChange={(e) => setG({ ufOrigem: e.target.value })}
+              >
+                <option value="">—</option>
+                {UFS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Destino</label>
+              <input
+                className={fieldCls}
+                placeholder="Ex.: São Paulo"
+                value={gerais.destino}
+                onChange={(e) => setG({ destino: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>UF Destino</label>
+              <select
+                className={fieldCls}
+                value={gerais.ufDestino}
+                onChange={(e) => setG({ ufDestino: e.target.value })}
+              >
+                <option value="">—</option>
+                {UFS.map((uf) => (
+                  <option key={uf} value={uf}>
+                    {uf}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Distância (km)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                placeholder="0"
+                className={fieldCls}
+                value={gerais.distancia}
+                onChange={(e) => setG({ distancia: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Produto</label>
+              <input
+                className={fieldCls}
+                placeholder="Ex.: Soja em grãos"
+                value={gerais.produto}
+                onChange={(e) => setG({ produto: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Tipo de Carga</label>
+              <select
+                className={fieldCls}
+                value={gerais.tipo}
+                onChange={(e) => setG({ tipo: e.target.value as TipoCarga })}
+              >
+                <option value="granel">Granel Sólido</option>
+                <option value="geral">Carga Geral</option>
+                <option value="container">Container</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Valor da Carga (R$)</label>
+              <input
+                inputMode="decimal"
+                placeholder="0,00"
+                className={fieldCls}
+                value={gerais.valorCarga}
+                onChange={(e) => setG({ valorCarga: maskMoney(e.target.value) })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>PF ou PJ</label>
+              <select
+                className={fieldCls}
+                value={gerais.pfpj}
+                onChange={(e) => setG({ pfpj: e.target.value as "PF" | "PJ" })}
+              >
+                <option value="PF">PF</option>
+                <option value="PJ">PJ</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>ICMS (%)</label>
+              <input
+                inputMode="decimal"
+                placeholder="0,00"
+                className={fieldCls}
+                value={gerais.icms}
+                onChange={(e) => setG({ icms: maskMoney(e.target.value) })}
+              />
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2.5">
+            <button
+              type="button"
+              onClick={salvar}
+              className="rounded-[7px] border border-navy bg-navy px-4 py-2.5 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-navy-2"
+            >
+              💾 Salvar Cotação
+            </button>
+            <button
+              type="button"
+              onClick={novaCotacao}
+              className="rounded-[7px] border border-line bg-panel px-4 py-2.5 text-[13px] font-bold text-ink transition-colors hover:bg-secondary"
+            >
+              ➕ Nova Cotação
+            </button>
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="rounded-[7px] border border-accent bg-accent px-4 py-2.5 text-[13px] font-bold text-accent-foreground transition-colors hover:bg-accent-dark"
+            >
+              📋 Ver Cotações
+            </button>
+          </div>
+        </Panel>
+
+        <div className="mt-[22px] grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-[18px]">
+          {EIXOS_LIST.map((eixos) => (
+            <FreightCard
+              key={eixos}
+              eixos={eixos}
+              gerais={gerais}
+              card={cards[eixos]!}
+              onChange={(patch) =>
+                setCards((prev) => ({
+                  ...prev,
+                  [eixos]: { ...prev[eixos]!, ...patch },
+                }))
+              }
+            />
+          ))}
+        </div>
+
+        <Panel title="Premissas assumidas">
+          <div className="rounded-[10px] border border-warn-line bg-warn-bg px-4 py-3.5 text-[12.5px] leading-relaxed text-warn-ink">
+            <b>Premissas assumidas — leia antes de usar:</b>
+            <ul className="mt-1.5 list-disc pl-5">
+              <li>
+                <b>Tabela ANTT (piso)</b> = (Distância × Deslocamento) + Carga e
+                Descarga, com coeficientes por eixo e tipo de carga listados abaixo.
+                Se a portaria SUROC reajustar os coeficientes, atualize a tabela.
+              </li>
+              <li>
+                <b>Tabela ANTT Motorista</b> = Tabela ANTT ÷ (1 − % SEST/SENAT), sendo
+                2,7% para PF e 0% para PJ.
+              </li>
+              <li>
+                <b>SEST/SENAT + INSS</b> só se aplica ao cálculo acima; não há desconto
+                separado em outro campo.
+              </li>
+              <li>
+                <b>Efrete/Pamcard</b> usa a UF de Origem: se MG, Frete Motorista×0,32% +
+                Pedágio×0,50%; nas demais UFs, Frete Motorista×0,70%.
+              </li>
+              <li>
+                <b>Margem Operacional (%)</b> = Margem (R$/ton) ÷ Frete Empresa (R$/ton).
+              </li>
+              <li>
+                <b>Pedágio</b> é um campo por card, pois o valor muda por eixo do
+                veículo.
+              </li>
+            </ul>
+          </div>
+        </Panel>
+
+        <Panel title='Coeficientes ANTT usados no cálculo'>
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
+            {(Object.keys(ANTT_COEF) as TipoCarga[]).map((key) => (
+              <div key={key}>
+                <div className="mb-1.5 text-[13px] font-bold">
+                  {ANTT_COEF[key].label}
+                </div>
+                <table className="w-full border-collapse text-xs">
+                  <thead>
+                    <tr className="text-left text-ink-soft">
+                      <th className="px-2 py-1">Eixos</th>
+                      <th className="px-2 py-1">Peso (ton)</th>
+                      <th className="px-2 py-1 text-right">Deslocamento (R$/km)</th>
+                      <th className="px-2 py-1 text-right">Carga e Descarga (R$)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {EIXOS_LIST.map((ei) => (
+                      <tr key={ei}>
+                        <td className="border-b border-line px-2 py-1">{ei}</td>
+                        <td className="border-b border-line px-2 py-1">{PESO[ei]}</td>
+                        <td className="border-b border-line px-2 py-1 text-right tabular-nums">
+                          {ANTT_COEF[key][ei]!.desloc.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 4,
+                            maximumFractionDigits: 4,
+                          })}
+                        </td>
+                        <td className="border-b border-line px-2 py-1 text-right tabular-nums">
+                          {ANTT_COEF[key][ei]!.cd.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      </div>
+
+      <footer className="px-6 pt-6 pb-10 text-center text-xs text-ink-soft">
+        Sistema gerado para uso interno. Os coeficientes de piso ANTT devem ser
+        conferidos periodicamente contra a portaria SUROC vigente.
+      </footer>
+
+      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+        <DialogContent className="max-w-[960px]">
+          <DialogHeader>
+            <DialogTitle>Cotações Salvas</DialogTitle>
+          </DialogHeader>
+          <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
+            <input
+              className={fieldCls}
+              placeholder="Filtrar por cliente"
+              value={filtros.cliente}
+              onChange={(e) => setFiltros({ ...filtros, cliente: e.target.value })}
+            />
+            <input
+              className={fieldCls}
+              placeholder="Filtrar por origem"
+              value={filtros.origem}
+              onChange={(e) => setFiltros({ ...filtros, origem: e.target.value })}
+            />
+            <input
+              className={fieldCls}
+              placeholder="Filtrar por destino"
+              value={filtros.destino}
+              onChange={(e) => setFiltros({ ...filtros, destino: e.target.value })}
+            />
+            <input
+              type="date"
+              className={fieldCls}
+              value={filtros.data}
+              onChange={(e) => setFiltros({ ...filtros, data: e.target.value })}
+            />
+          </div>
+          {filtrada.length === 0 ? (
+            <div className="p-8 text-center text-[13px] text-ink-soft">
+              Nenhuma cotação encontrada.
+            </div>
+          ) : (
+            <div className="max-h-[50vh] overflow-auto">
+              <table className="w-full border-collapse text-[12.5px]">
+                <thead>
+                  <tr className="text-left text-ink-soft">
+                    <th className="border-b-2 border-line p-2">Cliente</th>
+                    <th className="border-b-2 border-line p-2">Origem</th>
+                    <th className="border-b-2 border-line p-2">Destino</th>
+                    <th className="border-b-2 border-line p-2">Salvo em</th>
+                    <th className="border-b-2 border-line p-2" colSpan={2} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtrada.map((item) => (
+                    <tr key={item.id} className="hover:bg-secondary">
+                      <td className="border-b border-line p-2">
+                        {item.gerais.cliente || "—"}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {item.gerais.origem || "—"}
+                        {item.gerais.ufOrigem ? "/" + item.gerais.ufOrigem : ""}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {item.gerais.destino || "—"}
+                        {item.gerais.ufDestino ? "/" + item.gerais.ufDestino : ""}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {new Date(item.salvoEm).toLocaleString("pt-BR")}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          onClick={() => carregar(item)}
+                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground"
+                        >
+                          Carregar
+                        </button>
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          onClick={() => apagar(item)}
+                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
+                        >
+                          🗑 Apagar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={confirm !== null}
+        onOpenChange={(o) => !o && setConfirm(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar ação</AlertDialogTitle>
+            <AlertDialogDescription>{confirm?.msg}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-danger text-primary-foreground hover:bg-danger/90"
+              onClick={() => {
+                confirm?.action();
+                setConfirm(null);
+              }}
+            >
+              Confirmar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
