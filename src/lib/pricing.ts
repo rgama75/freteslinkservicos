@@ -132,8 +132,9 @@ export const cardsVazios = (): Record<number, DadosCard> =>
   Object.fromEntries(EIXOS_LIST.map((e) => [e, cardVazio()]));
 
 export function calcular(eixos: number, gerais: DadosGerais, card: DadosCard) {
-  const peso = PESO[eixos];
-  const coef = ANTT_COEF[gerais.tipo][eixos];
+  const peso = PESO[eixos]!;
+  const coef = ANTT_COEF[gerais.tipo][eixos]!;
+
   const distancia = parseFloat(gerais.distancia) || 0;
   const sestPct = gerais.pfpj === "PF" ? 0.027 : 0;
   const valorCarga = parseMoney(gerais.valorCarga);
