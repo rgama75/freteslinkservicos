@@ -81,8 +81,6 @@
 
 :root {
   --radius: 0.625rem;
-:root {
-  --radius: 0.625rem;
   --font-body: "Barlow", -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 
   --navy: oklch(0.271 0.028 250);
