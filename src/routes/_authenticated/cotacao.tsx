@@ -85,7 +85,10 @@ function Panel({
 }
 
 function Index() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [gerais, setGerais] = useState<DadosGerais>(geraisVazio);
+
   const [cards, setCards] = useState<Record<number, DadosCard>>(cardsVazios);
   const [lista, setLista] = useState<Cotacao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
