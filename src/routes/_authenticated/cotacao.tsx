@@ -92,6 +92,15 @@ function Index() {
   const queryClient = useQueryClient();
   const [gerais, setGerais] = useState<DadosGerais>(geraisVazio);
 
+  async function sair() {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/", replace: true });
+  }
+
+
+
   const [cards, setCards] = useState<Record<number, DadosCard>>(cardsVazios);
   const [lista, setLista] = useState<Cotacao[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
