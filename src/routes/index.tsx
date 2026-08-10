@@ -1,192 +1,168 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, Plus, Save, Trash2 } from "lucide-react";
-import { FreightCard } from "@/components/FreightCard";
-import {
-  ANTT_COEF,
-  EIXOS_LIST,
-  PESO,
-  UFS,
-  cardVazio,
-
-  cardsVazios,
-  gerarId,
-  geraisVazio,
-  getCotacoes,
-  maskMoney,
-  setCotacoes,
-  type Cotacao,
-  type DadosCard,
-  type DadosGerais,
-  type TipoCarga,
-} from "@/lib/pricing";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Loader2, LockKeyhole } from "lucide-react";
+import { z } from "zod";
+import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable/index";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Precificação de Fretes | Cotação Rodoviária 5, 6, 7 e 9 Eixos" },
+      { title: "Acessar | Sistema de Precificação de Fretes" },
       {
         name: "description",
         content:
-          "Calcule fretes rodoviários com piso ANTT, impostos, pedágio, viabilidade e margem operacional para 5, 6, 7 e 9 eixos.",
+          "Entre com e-mail e senha para acessar o sistema de precificação de fretes rodoviários com piso ANTT.",
       },
-      {
-        property: "og:title",
-        content: "Precificação de Fretes | Cotação Rodoviária",
-      },
+      { property: "og:title", content: "Acessar o Sistema de Precificação de Fretes" },
       {
         property: "og:description",
         content:
-          "Cotação simultânea para 5, 6, 7 e 9 eixos com piso ANTT calculado, impostos, viabilidade e margem operacional.",
+          "Login do sistema de cotação de fretes rodoviários para 5, 6, 7 e 9 eixos.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: Index,
+  component: LoginPage,
 });
 
 const fieldCls =
-  "w-full rounded-[7px] border border-line bg-panel px-2.5 py-2 text-sm text-ink focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent";
+  "w-full rounded-[7px] border border-line bg-panel px-3 py-2.5 text-sm text-ink focus:border-accent focus:outline-2 focus:outline-offset-1 focus:outline-accent";
 const labelCls = "mb-1.5 block text-xs font-semibold text-ink-soft";
 
-function Panel({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mt-[22px] rounded-xl border border-line bg-panel px-[22px] py-5">
-      <h2 className="mb-4 text-[15px] font-bold uppercase tracking-[0.06em] text-ink-soft">
-        {title}
-      </h2>
-      {children}
-    </section>
-  );
-}
+const credenciaisSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .email({ message: "Informe um e-mail válido" })
+    .max(255, { message: "E-mail muito longo" }),
+  senha: z
+    .string()
+    .min(6, { message: "A senha deve ter ao menos 6 caracteres" })
+    .max(72, { message: "Senha muito longa" }),
+});
 
-function Index() {
-  const [gerais, setGerais] = useState<DadosGerais>(geraisVazio);
-  const [cards, setCards] = useState<Record<number, DadosCard>>(cardsVazios);
-  const [lista, setLista] = useState<Cotacao[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [confirm, setConfirm] = useState<{
-    msg: string;
-    action: () => void;
-  } | null>(null);
-  const [filtros, setFiltros] = useState({
-    cliente: "",
-    origem: "",
-    destino: "",
-    data: "",
-  });
+const cadastroSchema = credenciaisSchema.extend({
+  nome: z
+    .string()
+    .trim()
+    .min(2, { message: "Informe seu nome" })
+    .max(100, { message: "Nome muito longo" }),
+  empresa: z.string().trim().max(120, { message: "Nome da empresa muito longo" }),
+});
+
+function LoginPage() {
+  const navigate = useNavigate();
+  const [modo, setModo] = useState<"login" | "cadastro">("login");
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [nome, setNome] = useState("");
+  const [empresa, setEmpresa] = useState("");
+  const [carregando, setCarregando] = useState(false);
+  const [verificando, setVerificando] = useState(true);
 
   useEffect(() => {
-    setLista(getCotacoes());
-  }, []);
+    let ativo = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!ativo) return;
+      if (data.session) navigate({ to: "/cotacao", replace: true });
+      else setVerificando(false);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) navigate({ to: "/cotacao", replace: true });
+    });
+    return () => {
+      ativo = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [navigate]);
 
-  const setG = (patch: Partial<DadosGerais>) =>
-    setGerais((prev) => ({ ...prev, ...patch }));
+  async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (carregando) return;
 
-  const salvar = () => {
-    if (!gerais.cliente.trim()) {
-      toast.warning("Informe o Nome do Cliente antes de salvar.");
+    if (modo === "login") {
+      const parsed = credenciaisSchema.safeParse({ email, senha });
+      if (!parsed.success) {
+        toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
+        return;
+      }
+      setCarregando(true);
+      const { error } = await supabase.auth.signInWithPassword({
+        email: parsed.data.email,
+        password: parsed.data.senha,
+      });
+      setCarregando(false);
+      if (error) {
+        toast.error(
+          error.message === "Invalid login credentials"
+            ? "E-mail ou senha incorretos."
+            : "Não foi possível entrar. Tente novamente.",
+        );
+        return;
+      }
+      toast.success("Bem-vindo de volta!");
+      navigate({ to: "/cotacao", replace: true });
       return;
     }
-    const nova: Cotacao = {
-      id: gerarId(),
-      salvoEm: new Date().toISOString(),
-      gerais,
-      cards,
-    };
-    const atual = [nova, ...getCotacoes()];
-    if (setCotacoes(atual)) {
-      setLista(atual);
-      toast.success("Cotação salva com sucesso.");
-    } else {
-      toast.error("Não foi possível salvar (armazenamento indisponível).");
+
+    const parsed = cadastroSchema.safeParse({ email, senha, nome, empresa });
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0]?.message ?? "Dados inválidos");
+      return;
     }
-  };
-
-  const novaCotacao = () =>
-    setConfirm({
-      msg: "Isso vai apagar todos os campos preenchidos e começar uma cotação em branco. Deseja continuar?",
-      action: () => {
-        setGerais(geraisVazio());
-        setCards(cardsVazios());
-        toast.success("Nova cotação pronta para preenchimento.");
+    setCarregando(true);
+    const { data, error } = await supabase.auth.signUp({
+      email: parsed.data.email,
+      password: parsed.data.senha,
+      options: {
+        emailRedirectTo: window.location.origin,
+        data: { full_name: parsed.data.nome, company: parsed.data.empresa },
       },
     });
+    setCarregando(false);
+    if (error) {
+      toast.error(
+        error.message.includes("already registered")
+          ? "Este e-mail já possui cadastro. Faça login."
+          : "Não foi possível criar a conta. Tente novamente.",
+      );
+      return;
+    }
+    if (!data.session) {
+      toast.success("Conta criada! Confirme seu e-mail para acessar.");
+      setModo("login");
+      return;
+    }
+    navigate({ to: "/cotacao", replace: true });
+  }
 
-  const carregar = (c: Cotacao) => {
-    setGerais({ ...geraisVazio(), ...c.gerais });
-    setCards(
-      Object.fromEntries(
-        EIXOS_LIST.map((e) => [e, { ...cardVazio(), ...(c.cards[e] ?? {}) }]),
-      ),
+  async function entrarComGoogle() {
+    setCarregando(true);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setCarregando(false);
+      toast.error("Não foi possível entrar com o Google.");
+      return;
+    }
+    if (result.redirected) return;
+    navigate({ to: "/cotacao", replace: true });
+  }
+
+  if (verificando) {
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-6 animate-spin text-accent" aria-label="Carregando" />
+      </main>
     );
-    setModalOpen(false);
-    toast.success("Cotação carregada.");
-  };
-
-  const apagar = (c: Cotacao) =>
-    setConfirm({
-      msg: `Tem certeza que deseja apagar a cotação de "${c.gerais.cliente || "esta cotação"}"? Essa ação não pode ser desfeita.`,
-      action: () => {
-        const atual = getCotacoes().filter((x) => x.id !== c.id);
-        if (setCotacoes(atual)) {
-          setLista(atual);
-          toast.success("Cotação apagada.");
-        } else {
-          toast.error("Não foi possível apagar a cotação.");
-        }
-      },
-    });
-
-  const filtrada = useMemo(
-    () =>
-      lista.filter((item) => {
-        const g = item.gerais;
-        const f = filtros;
-        if (f.cliente && !(g.cliente || "").toLowerCase().includes(f.cliente.toLowerCase()))
-          return false;
-        if (f.origem && !(g.origem || "").toLowerCase().includes(f.origem.toLowerCase()))
-          return false;
-        if (
-          f.destino &&
-          !(g.destino || "").toLowerCase().includes(f.destino.toLowerCase())
-        )
-          return false;
-        if (f.data) {
-          const datas = Object.values(item.cards).map((c) => c.data);
-          if (!datas.includes(f.data)) return false;
-        }
-        return true;
-      }),
-    [lista, filtros],
-  );
+  }
 
   return (
-    <div className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background">
       <div
         className="h-2.5 opacity-90"
         style={{
@@ -194,382 +170,145 @@ function Index() {
             "repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)",
         }}
       />
-      <div className="bg-panel py-4">
-        <div className="mx-auto max-w-[1440px] px-6">
-          <header className="rounded-[10px] bg-gradient-to-b from-navy to-navy-2 px-6 py-3">
-            <h1 className="text-[17px] font-bold tracking-[0.2px] text-primary-foreground">
-              Sistema de Precificação de Fretes — Transporte Rodoviário de Cargas
-            </h1>
-            <p className="mt-1 text-xs text-primary-foreground/70">
-              Cotação simultânea para 5, 6, 7 e 9 eixos · piso ANTT calculado ·
-              impostos · viabilidade · margem operacional
-            </p>
-          </header>
-        </div>
-      </div>
-
-      <div className="mx-auto max-w-[1440px] px-6 pb-15">
-        <Panel title="Dados da Cotação (aplicam-se aos 4 cards)">
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-x-4 gap-y-3.5">
-            <div>
-              <label className={labelCls}>Nome do Cliente</label>
-              <input
-                className={fieldCls}
-                placeholder="Ex.: Distribuidora ABC Ltda"
-                value={gerais.cliente}
-                onChange={(e) => setG({ cliente: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Origem</label>
-              <input
-                className={fieldCls}
-                placeholder="Ex.: Belo Horizonte"
-                value={gerais.origem}
-                onChange={(e) => setG({ origem: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>UF Origem</label>
-              <select
-                className={fieldCls}
-                value={gerais.ufOrigem}
-                onChange={(e) => setG({ ufOrigem: e.target.value })}
-              >
-                <option value="">—</option>
-                {UFS.map((uf) => (
-                  <option key={uf} value={uf}>
-                    {uf}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Destino</label>
-              <input
-                className={fieldCls}
-                placeholder="Ex.: São Paulo"
-                value={gerais.destino}
-                onChange={(e) => setG({ destino: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>UF Destino</label>
-              <select
-                className={fieldCls}
-                value={gerais.ufDestino}
-                onChange={(e) => setG({ ufDestino: e.target.value })}
-              >
-                <option value="">—</option>
-                {UFS.map((uf) => (
-                  <option key={uf} value={uf}>
-                    {uf}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Distância (km)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                placeholder="0"
-                className={fieldCls}
-                value={gerais.distancia}
-                onChange={(e) => setG({ distancia: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Produto</label>
-              <input
-                className={fieldCls}
-                placeholder="Ex.: Soja em grãos"
-                value={gerais.produto}
-                onChange={(e) => setG({ produto: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Tipo de Carga</label>
-              <select
-                className={fieldCls}
-                value={gerais.tipo}
-                onChange={(e) => setG({ tipo: e.target.value as TipoCarga })}
-              >
-                <option value="granel">Granel Sólido</option>
-                <option value="geral">Carga Geral</option>
-                <option value="container">Container</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Valor da Carga (R$)</label>
-              <input
-                inputMode="decimal"
-                placeholder="0,00"
-                className={fieldCls}
-                value={gerais.valorCarga}
-                onChange={(e) => setG({ valorCarga: maskMoney(e.target.value) })}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>PF ou PJ</label>
-              <select
-                className={fieldCls}
-                value={gerais.pfpj}
-                onChange={(e) => setG({ pfpj: e.target.value as "PF" | "PJ" })}
-              >
-                <option value="PF">PF</option>
-                <option value="PJ">PJ</option>
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>ICMS (%)</label>
-              <input
-                inputMode="decimal"
-                placeholder="0,00"
-                className={fieldCls}
-                value={gerais.icms}
-                onChange={(e) => setG({ icms: maskMoney(e.target.value) })}
-              />
-            </div>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-2.5">
-            <button
-              type="button"
-              onClick={salvar}
-              className="rounded-[7px] border border-navy bg-navy px-4 py-2.5 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-navy-2"
-            >
-              <Save className="mr-2 inline h-4 w-4 align-[-3px]" />Salvar Cotação
-            </button>
-            <button
-              type="button"
-              onClick={novaCotacao}
-              className="rounded-[7px] border border-line bg-panel px-4 py-2.5 text-[13px] font-bold text-ink transition-colors hover:bg-secondary"
-            >
-              <Plus className="mr-2 inline h-4 w-4 align-[-3px]" />Nova Cotação
-            </button>
-            <button
-              type="button"
-              onClick={() => setModalOpen(true)}
-              className="rounded-[7px] border border-accent bg-accent px-4 py-2.5 text-[13px] font-bold text-accent-foreground transition-colors hover:bg-accent-dark"
-            >
-              <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Ver Cotações
-            </button>
-          </div>
-        </Panel>
-
-        <div className="mt-[22px] grid grid-cols-1 gap-[18px] md:grid-cols-2 xl:grid-cols-4">
-          {EIXOS_LIST.map((eixos) => (
-            <FreightCard
-              key={eixos}
-              eixos={eixos}
-              gerais={gerais}
-              card={cards[eixos]!}
-              onChange={(patch) =>
-                setCards((prev) => ({
-                  ...prev,
-                  [eixos]: { ...prev[eixos]!, ...patch },
-                }))
-              }
-            />
-          ))}
+      <div className="mx-auto flex min-h-[calc(100vh-10px)] max-w-[440px] flex-col justify-center px-5 py-10">
+        <div className="rounded-[10px] bg-gradient-to-b from-navy to-navy-2 px-6 py-5">
+          <h1 className="text-[17px] font-bold tracking-[0.2px] text-primary-foreground">
+            Sistema de Precificação de Fretes
+          </h1>
+          <p className="mt-1 text-xs text-primary-foreground/70">
+            Transporte Rodoviário de Cargas · piso ANTT · impostos · margem
+          </p>
         </div>
 
-        <Panel title="Premissas assumidas">
-          <div className="rounded-[10px] border border-warn-line bg-warn-bg px-4 py-3.5 text-[12.5px] leading-relaxed text-warn-ink">
-            <b>Premissas assumidas — leia antes de usar:</b>
-            <ul className="mt-1.5 list-disc pl-5">
-              <li>
-                <b>Tabela ANTT (piso)</b> = (Distância × Deslocamento) + Carga e
-                Descarga, com coeficientes por eixo e tipo de carga listados abaixo.
-                Se a portaria SUROC reajustar os coeficientes, atualize a tabela.
-              </li>
-              <li>
-                <b>Tabela ANTT Motorista</b> = Tabela ANTT ÷ (1 − % SEST/SENAT), sendo
-                2,7% para PF e 0% para PJ.
-              </li>
-              <li>
-                <b>SEST/SENAT + INSS</b> só se aplica ao cálculo acima; não há desconto
-                separado em outro campo.
-              </li>
-              <li>
-                <b>Efrete/Pamcard</b> usa a UF de Origem: se MG, Frete Motorista×0,32% +
-                Pedágio×0,50%; nas demais UFs, Frete Motorista×0,70%.
-              </li>
-              <li>
-                <b>Margem Operacional (%)</b> = Margem (R$/ton) ÷ Frete Empresa (R$/ton).
-              </li>
-              <li>
-                <b>Pedágio</b> é um campo por card, pois o valor muda por eixo do
-                veículo.
-              </li>
-            </ul>
+        <section className="mt-4 rounded-[10px] border border-line bg-panel p-6">
+          <div className="flex items-center gap-2">
+            <LockKeyhole className="size-4 text-accent" />
+            <h2 className="text-xs font-bold tracking-[1px] text-ink uppercase">
+              {modo === "login" ? "Acessar o sistema" : "Criar conta"}
+            </h2>
           </div>
-        </Panel>
 
-        <Panel title='Coeficientes ANTT usados no cálculo'>
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(280px,1fr))] gap-4">
-            {(Object.keys(ANTT_COEF) as TipoCarga[]).map((key) => (
-              <div key={key}>
-                <div className="mb-1.5 text-[13px] font-bold">
-                  {ANTT_COEF[key].label}
+          <form className="mt-5 space-y-3.5" onSubmit={onSubmit}>
+            {modo === "cadastro" && (
+              <>
+                <div>
+                  <label className={labelCls} htmlFor="nome">
+                    Nome completo
+                  </label>
+                  <input
+                    id="nome"
+                    className={fieldCls}
+                    value={nome}
+                    maxLength={100}
+                    autoComplete="name"
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Ex.: Maria Souza"
+                  />
                 </div>
-                <table className="w-full border-collapse text-xs">
-                  <thead>
-                    <tr className="text-left text-ink-soft">
-                      <th className="px-2 py-1">Eixos</th>
-                      <th className="px-2 py-1">Peso (ton)</th>
-                      <th className="px-2 py-1 text-right">Deslocamento (R$/km)</th>
-                      <th className="px-2 py-1 text-right">Carga e Descarga (R$)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {EIXOS_LIST.map((ei) => (
-                      <tr key={ei}>
-                        <td className="border-b border-line px-2 py-1">{ei}</td>
-                        <td className="border-b border-line px-2 py-1">{PESO[ei]}</td>
-                        <td className="border-b border-line px-2 py-1 text-right tabular-nums">
-                          {ANTT_COEF[key][ei]!.desloc.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 4,
-                            maximumFractionDigits: 4,
-                          })}
-                        </td>
-                        <td className="border-b border-line px-2 py-1 text-right tabular-nums">
-                          {ANTT_COEF[key][ei]!.cd.toLocaleString("pt-BR", {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ))}
-          </div>
-        </Panel>
-      </div>
+                <div>
+                  <label className={labelCls} htmlFor="empresa">
+                    Empresa (opcional)
+                  </label>
+                  <input
+                    id="empresa"
+                    className={fieldCls}
+                    value={empresa}
+                    maxLength={120}
+                    autoComplete="organization"
+                    onChange={(e) => setEmpresa(e.target.value)}
+                    placeholder="Ex.: Transportes Alfa"
+                  />
+                </div>
+              </>
+            )}
 
-      <footer className="px-6 pt-6 pb-10 text-center text-xs text-ink-soft">
-        Sistema gerado para uso interno. Os coeficientes de piso ANTT devem ser
-        conferidos periodicamente contra a portaria SUROC vigente.
-      </footer>
-
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-[960px]">
-          <DialogHeader>
-            <DialogTitle>Cotações Salvas</DialogTitle>
-          </DialogHeader>
-          <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
-            <input
-              className={fieldCls}
-              placeholder="Filtrar por cliente"
-              value={filtros.cliente}
-              onChange={(e) => setFiltros({ ...filtros, cliente: e.target.value })}
-            />
-            <input
-              className={fieldCls}
-              placeholder="Filtrar por origem"
-              value={filtros.origem}
-              onChange={(e) => setFiltros({ ...filtros, origem: e.target.value })}
-            />
-            <input
-              className={fieldCls}
-              placeholder="Filtrar por destino"
-              value={filtros.destino}
-              onChange={(e) => setFiltros({ ...filtros, destino: e.target.value })}
-            />
-            <input
-              type="date"
-              className={fieldCls}
-              value={filtros.data}
-              onChange={(e) => setFiltros({ ...filtros, data: e.target.value })}
-            />
-          </div>
-          {filtrada.length === 0 ? (
-            <div className="p-8 text-center text-[13px] text-ink-soft">
-              Nenhuma cotação encontrada.
+            <div>
+              <label className={labelCls} htmlFor="email">
+                E-mail
+              </label>
+              <input
+                id="email"
+                type="email"
+                className={fieldCls}
+                value={email}
+                maxLength={255}
+                autoComplete="email"
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="voce@empresa.com.br"
+              />
             </div>
-          ) : (
-            <div className="max-h-[50vh] overflow-auto">
-              <table className="w-full border-collapse text-[12.5px]">
-                <thead>
-                  <tr className="text-left text-ink-soft">
-                    <th className="border-b-2 border-line p-2">Cliente</th>
-                    <th className="border-b-2 border-line p-2">Origem</th>
-                    <th className="border-b-2 border-line p-2">Destino</th>
-                    <th className="border-b-2 border-line p-2">Salvo em</th>
-                    <th className="border-b-2 border-line p-2" colSpan={2} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtrada.map((item) => (
-                    <tr key={item.id} className="hover:bg-secondary">
-                      <td className="border-b border-line p-2">
-                        {item.gerais.cliente || "—"}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {item.gerais.origem || "—"}
-                        {item.gerais.ufOrigem ? "/" + item.gerais.ufOrigem : ""}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {item.gerais.destino || "—"}
-                        {item.gerais.ufDestino ? "/" + item.gerais.ufDestino : ""}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {new Date(item.salvoEm).toLocaleString("pt-BR")}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        <button
-                          type="button"
-                          onClick={() => carregar(item)}
-                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground"
-                        >
-                          Carregar
-                        </button>
-                      </td>
-                      <td className="border-b border-line p-2">
-                        <button
-                          type="button"
-                          onClick={() => apagar(item)}
-                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
-                        >
-                          <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
-      <AlertDialog
-        open={confirm !== null}
-        onOpenChange={(o) => !o && setConfirm(null)}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar ação</AlertDialogTitle>
-            <AlertDialogDescription>{confirm?.msg}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-danger text-primary-foreground hover:bg-danger/90"
-              onClick={() => {
-                confirm?.action();
-                setConfirm(null);
-              }}
+            <div>
+              <label className={labelCls} htmlFor="senha">
+                Senha
+              </label>
+              <input
+                id="senha"
+                type="password"
+                className={fieldCls}
+                value={senha}
+                maxLength={72}
+                autoComplete={modo === "login" ? "current-password" : "new-password"}
+                onChange={(e) => setSenha(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={carregando}
+              className="mt-1 flex w-full items-center justify-center gap-2 rounded-[7px] bg-navy px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
             >
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+              {carregando && <Loader2 className="size-4 animate-spin" />}
+              {modo === "login" ? "Entrar" : "Criar conta"}
+            </button>
+          </form>
+
+          <div className="my-4 flex items-center gap-3">
+            <span className="h-px flex-1 bg-line" />
+            <span className="text-[11px] font-semibold text-ink-soft uppercase">ou</span>
+            <span className="h-px flex-1 bg-line" />
+          </div>
+
+          <button
+            type="button"
+            onClick={entrarComGoogle}
+            disabled={carregando}
+            className="flex w-full items-center justify-center gap-2 rounded-[7px] border border-line bg-background px-4 py-2.5 text-sm font-semibold text-ink transition-colors hover:border-accent disabled:opacity-60"
+          >
+            <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+              <path
+                fill="#4285F4"
+                d="M23.5 12.3c0-.9-.1-1.6-.2-2.3H12v4.3h6.5c-.1 1-.8 2.6-2.3 3.7l-.1.1 3.4 2.6.2.1c2.1-2 3.3-4.9 3.3-8.5z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 24c3.1 0 5.7-1 7.6-2.8l-3.6-2.8c-1 .7-2.3 1.2-4 1.2-3 0-5.6-2-6.5-4.8l-.1.1-3.5 2.7v.1C3.8 21.3 7.6 24 12 24z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.5 14.8c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3v-.1L1.9 7.3l-.1.1C1 9 .6 10.5.6 12.5s.4 3.5 1.2 5.1l3.7-2.8z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 4.7c2.1 0 3.6.9 4.4 1.7l3.2-3.1C17.7 1.4 15.1.3 12 .3 7.6.3 3.8 3 1.9 7.3l3.6 2.8C6.4 7.3 9 4.7 12 4.7z"
+              />
+            </svg>
+            Continuar com Google
+          </button>
+
+          <p className="mt-5 text-center text-xs text-ink-soft">
+            {modo === "login" ? "Não tem conta?" : "Já possui conta?"}{" "}
+            <button
+              type="button"
+              className="font-semibold text-accent-dark underline-offset-2 hover:underline"
+              onClick={() => setModo(modo === "login" ? "cadastro" : "login")}
+            >
+              {modo === "login" ? "Criar agora" : "Fazer login"}
+            </button>
+          </p>
+        </section>
+      </div>
+    </main>
   );
 }
