@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ClipboardList, Plus, Save, Trash2 } from "lucide-react";
 import { FreightCard } from "@/components/FreightCard";
 import {
   ANTT_COEF,
@@ -339,26 +340,26 @@ function Index() {
               onClick={salvar}
               className="rounded-[7px] border border-navy bg-navy px-4 py-2.5 text-[13px] font-bold text-primary-foreground transition-colors hover:bg-navy-2"
             >
-              💾 Salvar Cotação
+              <Save className="mr-2 inline h-4 w-4 align-[-3px]" />Salvar Cotação
             </button>
             <button
               type="button"
               onClick={novaCotacao}
               className="rounded-[7px] border border-line bg-panel px-4 py-2.5 text-[13px] font-bold text-ink transition-colors hover:bg-secondary"
             >
-              ➕ Nova Cotação
+              <Plus className="mr-2 inline h-4 w-4 align-[-3px]" />Nova Cotação
             </button>
             <button
               type="button"
               onClick={() => setModalOpen(true)}
               className="rounded-[7px] border border-accent bg-accent px-4 py-2.5 text-[13px] font-bold text-accent-foreground transition-colors hover:bg-accent-dark"
             >
-              📋 Ver Cotações
+              <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Ver Cotações
             </button>
           </div>
         </Panel>
 
-        <div className="mt-[22px] grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-[18px]">
+        <div className="mt-[22px] grid grid-cols-1 gap-[18px] md:grid-cols-2 xl:grid-cols-4">
           {EIXOS_LIST.map((eixos) => (
             <FreightCard
               key={eixos}
@@ -534,7 +535,7 @@ function Index() {
                           onClick={() => apagar(item)}
                           className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
                         >
-                          🗑 Apagar
+                          <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
                         </button>
                       </td>
                     </tr>
