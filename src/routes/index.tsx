@@ -7,7 +7,7 @@ import {
   EIXOS_LIST,
   PESO,
   UFS,
-  brl,
+  cardVazio,
   cardVazio,
   cardsVazios,
   gerarId,
