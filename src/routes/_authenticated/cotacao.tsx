@@ -126,6 +126,8 @@ function Index() {
   const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [submetidas, setSubmetidas] = useState<Record<string, boolean>>({});
+
 
   const isApprover = (email ?? "").toLowerCase() === APPROVER_EMAIL;
 
