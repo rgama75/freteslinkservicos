@@ -188,25 +188,16 @@ function Index() {
     setEnviando(true);
     try {
       await submeterAprovacao(g, c, "pendente");
-      if (isApprover) {
-        if (cotacaoId) {
-          removerLocal(cotacaoId);
-        } else {
-          salvarCotacao(g, c);
-        }
-        toast.success("Cotação aprovada e enviada para o fluxo de aprovação.");
-        await carregarSubmissoes();
-      } else {
-        setSubmetidas((prev) => ({ ...prev, [chave]: true }));
-        toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
-        await carregarSubmissoes();
-      }
-    } catch {
-      toast.error(
+      if (isApprover && !cotacaoId) salvarCotacao(g, c);
+      setSubmetidas((prev) => ({ ...prev, [chave]: true }));
+      toast.success(
         isApprover
-          ? "Não foi possível aprovar a cotação."
-          : "Não foi possível submeter a cotação à aprovação.",
+          ? "Cotação enviada para o fluxo de aprovação (pendente)."
+          : `Cotação submetida à aprovação de ${APPROVER_EMAIL}.`,
       );
+      await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível submeter a cotação à aprovação.");
     } finally {
       setEnviando(false);
     }
