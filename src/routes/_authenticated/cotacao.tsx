@@ -657,6 +657,80 @@ function Index() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={aprovModalOpen} onOpenChange={setAprovModalOpen}>
+        <DialogContent className="max-w-[960px]">
+          <DialogHeader>
+            <DialogTitle>Cotações Submetidas à Aprovação</DialogTitle>
+          </DialogHeader>
+          {submissoes.length === 0 ? (
+            <div className="p-8 text-center text-[13px] text-ink-soft">
+              Nenhuma cotação submetida.
+            </div>
+          ) : (
+            <div className="max-h-[50vh] overflow-auto">
+              <table className="w-full border-collapse text-[12.5px]">
+                <thead>
+                  <tr className="text-left text-ink-soft">
+                    <th className="border-b-2 border-line p-2">Cliente</th>
+                    <th className="border-b-2 border-line p-2">Origem</th>
+                    <th className="border-b-2 border-line p-2">Destino</th>
+                    <th className="border-b-2 border-line p-2">Enviado por</th>
+                    <th className="border-b-2 border-line p-2">Enviado em</th>
+                    <th className="border-b-2 border-line p-2">Status</th>
+                    <th className="border-b-2 border-line p-2" colSpan={2} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissoes.map((s) => (
+                    <tr key={s.id} className="hover:bg-secondary">
+                      <td className="border-b border-line p-2">{s.cliente || "—"}</td>
+                      <td className="border-b border-line p-2">
+                        {s.origem || "—"}
+                        {s.uf_origem ? "/" + s.uf_origem : ""}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {s.destino || "—"}
+                        {s.uf_destino ? "/" + s.uf_destino : ""}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {s.submitted_by_email || "—"}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {new Date(s.created_at).toLocaleString("pt-BR")}
+                      </td>
+                      <td className="border-b border-line p-2 font-semibold capitalize">
+                        {s.status}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          disabled={s.status === "aprovada"}
+                          onClick={() => decidir(s.id, "aprovada")}
+                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
+                        >
+                          Aprovar
+                        </button>
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          disabled={s.status === "reprovada"}
+                          onClick={() => decidir(s.id, "reprovada")}
+                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:opacity-50"
+                        >
+                          Reprovar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+
       <AlertDialog
         open={confirm !== null}
         onOpenChange={(o) => !o && setConfirm(null)}
