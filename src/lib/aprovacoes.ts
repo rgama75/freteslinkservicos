@@ -23,6 +23,7 @@ export type Submissao = {
 export async function submeterAprovacao(
   gerais: DadosGerais,
   cards: Record<number, DadosCard>,
+  status: SubmissaoStatus = "pendente",
 ) {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
@@ -37,10 +38,14 @@ export async function submeterAprovacao(
     destino: gerais.destino ?? "",
     uf_destino: gerais.ufDestino ?? "",
     dados: { gerais, cards } as never,
-    status: "pendente",
+    status,
+    ...(status === "pendente"
+      ? {}
+      : { decided_at: new Date().toISOString(), decided_by: user.id }),
   });
   if (error) throw error;
 }
+
 
 export async function listarSubmissoes(): Promise<Submissao[]> {
   const { data, error } = await supabase
