@@ -717,7 +717,7 @@ function Index() {
                             item.gerais.origem,
                             item.gerais.destino,
                           )
-                        ] ?? "—"}
+                        ] ?? "pendente"}
                       </td>
                       <td className="border-b border-line p-2">
                         <button
@@ -774,9 +774,9 @@ function Index() {
           <DialogHeader>
             <DialogTitle>Cotações Submetidas à Aprovação</DialogTitle>
           </DialogHeader>
-          {submissoes.length === 0 ? (
+          {pendentes.length === 0 ? (
             <div className="p-8 text-center text-[13px] text-ink-soft">
-              Nenhuma cotação submetida.
+              Nenhuma cotação pendente de aprovação.
             </div>
           ) : (
             <div className="max-h-[50vh] overflow-auto">
@@ -793,7 +793,7 @@ function Index() {
                   </tr>
                 </thead>
                 <tbody>
-                  {submissoes.map((s) => (
+                  {pendentes.map((s) => (
                     <tr key={s.id} className="hover:bg-secondary">
                       <td className="border-b border-line p-2">{s.cliente || "—"}</td>
                       <td className="border-b border-line p-2">
@@ -816,8 +816,7 @@ function Index() {
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
-                          onClick={() => decidir(s.id, "aprovada")}
-
+                          onClick={() => decidir(s, "aprovada")}
                           className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
                         >
                           Aprovar
@@ -826,8 +825,7 @@ function Index() {
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
-                          disabled={s.status === "reprovada"}
-                          onClick={() => decidir(s.id, "reprovada")}
+                          onClick={() => decidir(s, "reprovada")}
                           className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:opacity-50"
                         >
                           Reprovar
