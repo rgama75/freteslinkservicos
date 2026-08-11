@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
+import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
@@ -223,6 +223,37 @@ function Index() {
       toast.error("Não foi possível registrar a decisão.");
     }
   };
+
+  // Aprovador decide direto na aba "Ver Cotações"
+  const decidirLocal = async (
+    g: DadosGerais,
+    c: Record<number, DadosCard>,
+    status: "aprovada" | "reprovada",
+  ) => {
+    if (!g.cliente.trim()) {
+      toast.warning("Informe o Nome do Cliente antes de decidir.");
+      return;
+    }
+    setEnviando(true);
+    try {
+      const chave = chaveSub(g.cliente, g.origem, g.destino);
+      const existente = submissoes.find(
+        (s) => chaveSub(s.cliente, s.origem, s.destino) === chave,
+      );
+      if (existente) {
+        await decidirSubmissao(existente.id, status);
+      } else {
+        await submeterAprovacao(g, c, status);
+      }
+      toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
+      await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível registrar a decisão.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
 
 
 
@@ -716,27 +747,40 @@ function Index() {
                         </button>
                       </td>
                       <td className="border-b border-line p-2">
-                        <button
-                          type="button"
-                          disabled={enviando || (!isApprover && submetidas[item.id] === true)}
-                          onClick={() => submeter(item.gerais, item.cards, item.id, item.id)}
-
-                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          {isApprover ? (
-                            <>
+                        {isApprover ? (
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              disabled={enviando}
+                              onClick={() => decidirLocal(item.gerais, item.cards, "aprovada")}
+                              className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                            >
                               <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
-                            </>
-                          ) : (
-                            <>
-                              <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
-                              {submetidas[item.id] === true
-                                ? "Submetida a aprovação"
-                                : "Submeter a aprovação"}
-                            </>
-                          )}
-                        </button>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={enviando}
+                              onClick={() => decidirLocal(item.gerais, item.cards, "reprovada")}
+                              className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <X className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Reprovar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={enviando || submetidas[item.id] === true}
+                            onClick={() => submeter(item.gerais, item.cards, item.id, item.id)}
+                            className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                          >
+                            <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
+                            {submetidas[item.id] === true
+                              ? "Submetida a aprovação"
+                              : "Submeter a aprovação"}
+                          </button>
+                        )}
                       </td>
+
 
                       <td className="border-b border-line p-2">
                         <button
