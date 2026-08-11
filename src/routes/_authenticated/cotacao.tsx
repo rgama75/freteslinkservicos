@@ -126,7 +126,21 @@ function Index() {
   const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
   const [enviando, setEnviando] = useState(false);
-  const [submetidas, setSubmetidas] = useState<Record<string, boolean>>({});
+  const [submetidas, setSubmetidas] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cotacoes_submetidas") ?? "{}") as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cotacoes_submetidas", JSON.stringify(submetidas));
+    } catch {
+      /* armazenamento indisponível */
+    }
+  }, [submetidas]);
 
 
   const isApprover = (email ?? "").toLowerCase() === APPROVER_EMAIL;
