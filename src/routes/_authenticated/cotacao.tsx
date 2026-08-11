@@ -170,10 +170,6 @@ function Index() {
     return map;
   }, [submissoes]);
 
-  const removerLocal = (id: string) => {
-    const atual = getCotacoes().filter((x) => x.id !== id);
-    if (setCotacoes(atual)) setLista(atual);
-  };
 
   const submeter = async (
     g: DadosGerais,
