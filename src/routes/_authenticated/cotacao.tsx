@@ -190,25 +190,33 @@ function Index() {
   const setG = (patch: Partial<DadosGerais>) =>
     setGerais((prev) => ({ ...prev, ...patch }));
 
+  const salvarCotacao = (g: DadosGerais, c: Record<number, DadosCard>) => {
+    const nova: Cotacao = {
+      id: gerarId(),
+      salvoEm: new Date().toISOString(),
+      gerais: g,
+      cards: c,
+    };
+    const atual = [nova, ...getCotacoes()];
+    if (setCotacoes(atual)) {
+      setLista(atual);
+      return true;
+    }
+    return false;
+  };
+
   const salvar = () => {
     if (!gerais.cliente.trim()) {
       toast.warning("Informe o Nome do Cliente antes de salvar.");
       return;
     }
-    const nova: Cotacao = {
-      id: gerarId(),
-      salvoEm: new Date().toISOString(),
-      gerais,
-      cards,
-    };
-    const atual = [nova, ...getCotacoes()];
-    if (setCotacoes(atual)) {
-      setLista(atual);
+    if (salvarCotacao(gerais, cards)) {
       toast.success("Cotação salva com sucesso.");
     } else {
       toast.error("Não foi possível salvar (armazenamento indisponível).");
     }
   };
+
 
   const novaCotacao = () =>
     setConfirm({
