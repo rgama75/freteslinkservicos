@@ -142,22 +142,37 @@ function Index() {
     }
   };
 
-  const submeter = async (g: DadosGerais, c: Record<number, DadosCard>) => {
+  const submeter = async (
+    g: DadosGerais,
+    c: Record<number, DadosCard>,
+    chave: string,
+  ) => {
     if (!g.cliente.trim()) {
       toast.warning("Informe o Nome do Cliente antes de submeter à aprovação.");
       return;
     }
     setEnviando(true);
     try {
-      await submeterAprovacao(g, c);
-      toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
-      if (isApprover) await carregarSubmissoes();
+      await submeterAprovacao(g, c, isApprover ? "aprovada" : "pendente");
+      if (isApprover) {
+        salvarCotacao(g, c);
+        toast.success("Cotação aprovada e salva.");
+        await carregarSubmissoes();
+      } else {
+        setSubmetidas((prev) => ({ ...prev, [chave]: true }));
+        toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
+      }
     } catch {
-      toast.error("Não foi possível submeter a cotação à aprovação.");
+      toast.error(
+        isApprover
+          ? "Não foi possível aprovar a cotação."
+          : "Não foi possível submeter a cotação à aprovação.",
+      );
     } finally {
       setEnviando(false);
     }
   };
+
 
   const decidir = async (id: string, status: "aprovada" | "reprovada") => {
     try {
