@@ -122,9 +122,53 @@ function Index() {
     data: "",
   });
 
+  const [email, setEmail] = useState<string | null>(null);
+  const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
+  const [aprovModalOpen, setAprovModalOpen] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  const isApprover = (email ?? "").toLowerCase() === APPROVER_EMAIL;
+
   useEffect(() => {
     setLista(getCotacoes());
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
+
+  const carregarSubmissoes = async () => {
+    try {
+      setSubmissoes(await listarSubmissoes());
+    } catch {
+      toast.error("Não foi possível carregar as submissões.");
+    }
+  };
+
+  const submeter = async (g: DadosGerais, c: Record<number, DadosCard>) => {
+    if (!g.cliente.trim()) {
+      toast.warning("Informe o Nome do Cliente antes de submeter à aprovação.");
+      return;
+    }
+    setEnviando(true);
+    try {
+      await submeterAprovacao(g, c);
+      toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
+      if (isApprover) await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível submeter a cotação à aprovação.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const decidir = async (id: string, status: "aprovada" | "reprovada") => {
+    try {
+      await decidirSubmissao(id, status);
+      toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
+      await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível registrar a decisão.");
+    }
+  };
+
 
   const setG = (patch: Partial<DadosGerais>) =>
     setGerais((prev) => ({ ...prev, ...patch }));
