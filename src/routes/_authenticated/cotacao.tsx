@@ -2,8 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, LogOut, Plus, Save, Trash2 } from "lucide-react";
+import { ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  APPROVER_EMAIL,
+  decidirSubmissao,
+  listarSubmissoes,
+  submeterAprovacao,
+  type Submissao,
+} from "@/lib/aprovacoes";
 
 import { FreightCard } from "@/components/FreightCard";
 import {
