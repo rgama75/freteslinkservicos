@@ -170,10 +170,6 @@ function Index() {
     return map;
   }, [submissoes]);
 
-  const removerLocal = (id: string) => {
-    const atual = getCotacoes().filter((x) => x.id !== id);
-    if (setCotacoes(atual)) setLista(atual);
-  };
 
   const submeter = async (
     g: DadosGerais,
@@ -187,35 +183,40 @@ function Index() {
     }
     setEnviando(true);
     try {
-      await submeterAprovacao(g, c, isApprover ? "aprovada" : "pendente");
-      if (isApprover) {
-        if (cotacaoId) {
-          removerLocal(cotacaoId);
-        } else {
-          salvarCotacao(g, c);
-        }
-        toast.success("Cotação aprovada e enviada para o fluxo de aprovação.");
-        await carregarSubmissoes();
-      } else {
-        setSubmetidas((prev) => ({ ...prev, [chave]: true }));
-        toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
-        await carregarSubmissoes();
-      }
-    } catch {
-      toast.error(
+      await submeterAprovacao(g, c, "pendente");
+      if (isApprover && !cotacaoId) salvarCotacao(g, c);
+      setSubmetidas((prev) => ({ ...prev, [chave]: true }));
+      toast.success(
         isApprover
-          ? "Não foi possível aprovar a cotação."
-          : "Não foi possível submeter a cotação à aprovação.",
+          ? "Cotação enviada para o fluxo de aprovação (pendente)."
+          : `Cotação submetida à aprovação de ${APPROVER_EMAIL}.`,
       );
+      await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível submeter a cotação à aprovação.");
     } finally {
       setEnviando(false);
     }
   };
 
 
-  const decidir = async (id: string, status: "aprovada" | "reprovada") => {
+  const pendentes = useMemo(
+    () => submissoes.filter((s) => s.status === "pendente"),
+    [submissoes],
+  );
+
+  const decidir = async (s: Submissao, status: "aprovada" | "reprovada") => {
     try {
-      await decidirSubmissao(id, status);
+      await decidirSubmissao(s.id, status);
+      const dados = s.dados as { gerais?: DadosGerais; cards?: Record<number, DadosCard> } | null;
+      if (dados?.gerais && dados?.cards) {
+        const existe = getCotacoes().some(
+          (x) =>
+            chaveSub(x.gerais.cliente, x.gerais.origem, x.gerais.destino) ===
+            chaveSub(s.cliente, s.origem, s.destino),
+        );
+        if (!existe) salvarCotacao(dados.gerais, dados.cards);
+      }
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
     } catch {
@@ -703,7 +704,7 @@ function Index() {
                             item.gerais.origem,
                             item.gerais.destino,
                           )
-                        ] ?? "—"}
+                        ] ?? "pendente"}
                       </td>
                       <td className="border-b border-line p-2">
                         <button
@@ -760,9 +761,9 @@ function Index() {
           <DialogHeader>
             <DialogTitle>Cotações Submetidas à Aprovação</DialogTitle>
           </DialogHeader>
-          {submissoes.length === 0 ? (
+          {pendentes.length === 0 ? (
             <div className="p-8 text-center text-[13px] text-ink-soft">
-              Nenhuma cotação submetida.
+              Nenhuma cotação pendente de aprovação.
             </div>
           ) : (
             <div className="max-h-[50vh] overflow-auto">
@@ -779,7 +780,7 @@ function Index() {
                   </tr>
                 </thead>
                 <tbody>
-                  {submissoes.map((s) => (
+                  {pendentes.map((s) => (
                     <tr key={s.id} className="hover:bg-secondary">
                       <td className="border-b border-line p-2">{s.cliente || "—"}</td>
                       <td className="border-b border-line p-2">
@@ -802,8 +803,7 @@ function Index() {
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
-                          onClick={() => decidir(s.id, "aprovada")}
-
+                          onClick={() => decidir(s, "aprovada")}
                           className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
                         >
                           Aprovar
@@ -812,8 +812,7 @@ function Index() {
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
-                          disabled={s.status === "reprovada"}
-                          onClick={() => decidir(s.id, "reprovada")}
+                          onClick={() => decidir(s, "reprovada")}
                           className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:opacity-50"
                         >
                           Reprovar
