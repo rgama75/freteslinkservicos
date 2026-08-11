@@ -171,8 +171,8 @@ function LoginPage() {
             "repeating-linear-gradient(90deg, var(--accent) 0 28px, transparent 28px 46px)",
         }}
       />
-      <div className="mx-auto flex min-h-[calc(100vh-10px)] max-w-[440px] flex-col justify-center px-5 py-10">
-        <div className="grid grid-cols-[1fr_120px] overflow-hidden rounded-[10px]">
+      <div className="mx-auto flex min-h-[calc(100vh-10px)] max-w-[520px] flex-col justify-center px-5 py-10">
+        <div className="grid grid-cols-[1fr_140px] overflow-hidden rounded-[10px]">
           <div className="flex flex-col justify-center bg-gradient-to-b from-navy to-navy-2 px-5 py-5">
             <h1 className="text-[17px] font-bold leading-tight tracking-[0.2px] text-primary-foreground">
               Sistema de Precificação de Fretes
@@ -185,7 +185,7 @@ function LoginPage() {
             <img
               src={logoAsset.url}
               alt="Link Group"
-              className="h-8 w-auto object-contain"
+              className="h-9 w-auto object-contain"
             />
           </div>
         </div>
