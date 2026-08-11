@@ -2,8 +2,15 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, LogOut, Plus, Save, Trash2 } from "lucide-react";
+import { ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  APPROVER_EMAIL,
+  decidirSubmissao,
+  listarSubmissoes,
+  submeterAprovacao,
+  type Submissao,
+} from "@/lib/aprovacoes";
 
 import { FreightCard } from "@/components/FreightCard";
 import {
@@ -115,9 +122,53 @@ function Index() {
     data: "",
   });
 
+  const [email, setEmail] = useState<string | null>(null);
+  const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
+  const [aprovModalOpen, setAprovModalOpen] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+
+  const isApprover = (email ?? "").toLowerCase() === APPROVER_EMAIL;
+
   useEffect(() => {
     setLista(getCotacoes());
+    supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
   }, []);
+
+  const carregarSubmissoes = async () => {
+    try {
+      setSubmissoes(await listarSubmissoes());
+    } catch {
+      toast.error("Não foi possível carregar as submissões.");
+    }
+  };
+
+  const submeter = async (g: DadosGerais, c: Record<number, DadosCard>) => {
+    if (!g.cliente.trim()) {
+      toast.warning("Informe o Nome do Cliente antes de submeter à aprovação.");
+      return;
+    }
+    setEnviando(true);
+    try {
+      await submeterAprovacao(g, c);
+      toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
+      if (isApprover) await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível submeter a cotação à aprovação.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  const decidir = async (id: string, status: "aprovada" | "reprovada") => {
+    try {
+      await decidirSubmissao(id, status);
+      toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
+      await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível registrar a decisão.");
+    }
+  };
+
 
   const setG = (patch: Partial<DadosGerais>) =>
     setGerais((prev) => ({ ...prev, ...patch }));
@@ -381,6 +432,28 @@ function Index() {
             >
               <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Ver Cotações
             </button>
+            {!isApprover && (
+              <button
+                type="button"
+                disabled={enviando}
+                onClick={() => submeter(gerais, cards)}
+                className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:opacity-60"
+              >
+                <Send className="mr-2 inline h-4 w-4 align-[-3px]" />Submeter a aprovação
+              </button>
+            )}
+            {isApprover && (
+              <button
+                type="button"
+                onClick={() => {
+                  setAprovModalOpen(true);
+                  void carregarSubmissoes();
+                }}
+                className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground"
+              >
+                <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Cotações para Aprovação
+              </button>
+            )}
           </div>
         </Panel>
 
@@ -525,7 +598,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
-                    <th className="border-b-2 border-line p-2" colSpan={2} />
+                    <th className="border-b-2 border-line p-2" colSpan={isApprover ? 2 : 3} />
                   </tr>
                 </thead>
                 <tbody>
@@ -554,6 +627,18 @@ function Index() {
                           Carregar
                         </button>
                       </td>
+                      {!isApprover && (
+                        <td className="border-b border-line p-2">
+                          <button
+                            type="button"
+                            disabled={enviando}
+                            onClick={() => submeter(item.gerais, item.cards)}
+                            className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-60"
+                          >
+                            <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Submeter a aprovação
+                          </button>
+                        </td>
+                      )}
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
@@ -571,6 +656,80 @@ function Index() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={aprovModalOpen} onOpenChange={setAprovModalOpen}>
+        <DialogContent className="max-w-[960px]">
+          <DialogHeader>
+            <DialogTitle>Cotações Submetidas à Aprovação</DialogTitle>
+          </DialogHeader>
+          {submissoes.length === 0 ? (
+            <div className="p-8 text-center text-[13px] text-ink-soft">
+              Nenhuma cotação submetida.
+            </div>
+          ) : (
+            <div className="max-h-[50vh] overflow-auto">
+              <table className="w-full border-collapse text-[12.5px]">
+                <thead>
+                  <tr className="text-left text-ink-soft">
+                    <th className="border-b-2 border-line p-2">Cliente</th>
+                    <th className="border-b-2 border-line p-2">Origem</th>
+                    <th className="border-b-2 border-line p-2">Destino</th>
+                    <th className="border-b-2 border-line p-2">Enviado por</th>
+                    <th className="border-b-2 border-line p-2">Enviado em</th>
+                    <th className="border-b-2 border-line p-2">Status</th>
+                    <th className="border-b-2 border-line p-2" colSpan={2} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {submissoes.map((s) => (
+                    <tr key={s.id} className="hover:bg-secondary">
+                      <td className="border-b border-line p-2">{s.cliente || "—"}</td>
+                      <td className="border-b border-line p-2">
+                        {s.origem || "—"}
+                        {s.uf_origem ? "/" + s.uf_origem : ""}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {s.destino || "—"}
+                        {s.uf_destino ? "/" + s.uf_destino : ""}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {s.submitted_by_email || "—"}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {new Date(s.created_at).toLocaleString("pt-BR")}
+                      </td>
+                      <td className="border-b border-line p-2 font-semibold capitalize">
+                        {s.status}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          disabled={s.status === "aprovada"}
+                          onClick={() => decidir(s.id, "aprovada")}
+                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
+                        >
+                          Aprovar
+                        </button>
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          disabled={s.status === "reprovada"}
+                          onClick={() => decidir(s.id, "reprovada")}
+                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:opacity-50"
+                        >
+                          Reprovar
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
 
       <AlertDialog
         open={confirm !== null}
