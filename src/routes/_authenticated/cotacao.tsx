@@ -598,7 +598,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
-                    <th className="border-b-2 border-line p-2" colSpan={2} />
+                    <th className="border-b-2 border-line p-2" colSpan={isApprover ? 2 : 3} />
                   </tr>
                 </thead>
                 <tbody>
