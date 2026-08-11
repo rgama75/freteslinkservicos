@@ -627,6 +627,18 @@ function Index() {
                           Carregar
                         </button>
                       </td>
+                      {!isApprover && (
+                        <td className="border-b border-line p-2">
+                          <button
+                            type="button"
+                            disabled={enviando}
+                            onClick={() => submeter(item.gerais, item.cards)}
+                            className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-60"
+                          >
+                            <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Submeter a aprovação
+                          </button>
+                        </td>
+                      )}
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
