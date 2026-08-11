@@ -7,7 +7,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import logoAsset from "@/assets/logo-link.png.asset.json";
 
+function destinoSeguro(next: unknown): string | null {
+  if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//"))
+    return null;
+  return next;
+}
+
 export const Route = createFileRoute("/")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: destinoSeguro(s['next']) ?? undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Acessar | Sistema de Precificação de Fretes" },
@@ -56,6 +65,15 @@ const cadastroSchema = credenciaisSchema.extend({
 
 function LoginPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+
+  function irParaDestino() {
+    if (next) {
+      window.location.href = next;
+      return;
+    }
+    navigate({ to: "/cotacao", replace: true });
+  }
   const [modo, setModo] = useState<"login" | "cadastro">("login");
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
@@ -68,17 +86,18 @@ function LoginPage() {
     let ativo = true;
     supabase.auth.getSession().then(({ data }) => {
       if (!ativo) return;
-      if (data.session) navigate({ to: "/cotacao", replace: true });
+      if (data.session) irParaDestino();
       else setVerificando(false);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) navigate({ to: "/cotacao", replace: true });
+      if (session) irParaDestino();
     });
     return () => {
       ativo = false;
       sub.subscription.unsubscribe();
     };
-  }, [navigate]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate, next]);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -105,7 +124,7 @@ function LoginPage() {
         return;
       }
       toast.success("Bem-vindo de volta!");
-      navigate({ to: "/cotacao", replace: true });
+      irParaDestino();
       return;
     }
 
@@ -119,7 +138,7 @@ function LoginPage() {
       email: parsed.data.email,
       password: parsed.data.senha,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: window.location.origin + (next ?? ""),
         data: { full_name: parsed.data.nome, company: parsed.data.empresa },
       },
     });
@@ -137,13 +156,13 @@ function LoginPage() {
       setModo("login");
       return;
     }
-    navigate({ to: "/cotacao", replace: true });
+    irParaDestino();
   }
 
   async function entrarComGoogle() {
     setCarregando(true);
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: window.location.origin + (next ?? ""),
     });
     if (result.error) {
       setCarregando(false);
@@ -151,7 +170,7 @@ function LoginPage() {
       return;
     }
     if (result.redirected) return;
-    navigate({ to: "/cotacao", replace: true });
+    irParaDestino();
   }
 
   if (verificando) {
