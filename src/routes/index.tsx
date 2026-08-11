@@ -172,20 +172,20 @@ function LoginPage() {
         }}
       />
       <div className="mx-auto flex min-h-[calc(100vh-10px)] max-w-[440px] flex-col justify-center px-5 py-10">
-        <div className="grid grid-cols-[1fr_auto] overflow-hidden rounded-[10px]">
-          <div className="flex flex-col justify-center bg-gradient-to-b from-navy to-navy-2 px-6 py-5">
-            <h1 className="text-[17px] font-bold tracking-[0.2px] text-primary-foreground">
+        <div className="grid grid-cols-[1fr_120px] overflow-hidden rounded-[10px]">
+          <div className="flex flex-col justify-center bg-gradient-to-b from-navy to-navy-2 px-5 py-5">
+            <h1 className="text-[17px] font-bold leading-tight tracking-[0.2px] text-primary-foreground">
               Sistema de Precificação de Fretes
             </h1>
-            <p className="mt-1 text-xs text-primary-foreground/70">
+            <p className="mt-1 text-xs leading-snug text-primary-foreground/70">
               Transporte Rodoviário de Cargas · piso ANTT · impostos · margem
             </p>
           </div>
-          <div className="flex items-center justify-center bg-white px-6 py-5">
+          <div className="flex items-center justify-center bg-white px-4 py-5">
             <img
               src={logoAsset.url}
               alt="Link Group"
-              className="h-10 w-auto object-contain"
+              className="h-8 w-auto object-contain"
             />
           </div>
         </div>
