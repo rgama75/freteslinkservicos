@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
+import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
@@ -126,6 +126,22 @@ function Index() {
   const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
   const [enviando, setEnviando] = useState(false);
+  const [submetidas, setSubmetidas] = useState<Record<string, boolean>>(() => {
+    try {
+      return JSON.parse(localStorage.getItem("cotacoes_submetidas") ?? "{}") as Record<string, boolean>;
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("cotacoes_submetidas", JSON.stringify(submetidas));
+    } catch {
+      /* armazenamento indisponível */
+    }
+  }, [submetidas]);
+
 
   const isApprover = (email ?? "").toLowerCase() === APPROVER_EMAIL;
 
@@ -142,22 +158,37 @@ function Index() {
     }
   };
 
-  const submeter = async (g: DadosGerais, c: Record<number, DadosCard>) => {
+  const submeter = async (
+    g: DadosGerais,
+    c: Record<number, DadosCard>,
+    chave: string,
+  ) => {
     if (!g.cliente.trim()) {
       toast.warning("Informe o Nome do Cliente antes de submeter à aprovação.");
       return;
     }
     setEnviando(true);
     try {
-      await submeterAprovacao(g, c);
-      toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
-      if (isApprover) await carregarSubmissoes();
+      await submeterAprovacao(g, c, isApprover ? "aprovada" : "pendente");
+      if (isApprover) {
+        salvarCotacao(g, c);
+        toast.success("Cotação aprovada e salva.");
+        await carregarSubmissoes();
+      } else {
+        setSubmetidas((prev) => ({ ...prev, [chave]: true }));
+        toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
+      }
     } catch {
-      toast.error("Não foi possível submeter a cotação à aprovação.");
+      toast.error(
+        isApprover
+          ? "Não foi possível aprovar a cotação."
+          : "Não foi possível submeter a cotação à aprovação.",
+      );
     } finally {
       setEnviando(false);
     }
   };
+
 
   const decidir = async (id: string, status: "aprovada" | "reprovada") => {
     try {
@@ -173,25 +204,33 @@ function Index() {
   const setG = (patch: Partial<DadosGerais>) =>
     setGerais((prev) => ({ ...prev, ...patch }));
 
+  const salvarCotacao = (g: DadosGerais, c: Record<number, DadosCard>) => {
+    const nova: Cotacao = {
+      id: gerarId(),
+      salvoEm: new Date().toISOString(),
+      gerais: g,
+      cards: c,
+    };
+    const atual = [nova, ...getCotacoes()];
+    if (setCotacoes(atual)) {
+      setLista(atual);
+      return true;
+    }
+    return false;
+  };
+
   const salvar = () => {
     if (!gerais.cliente.trim()) {
       toast.warning("Informe o Nome do Cliente antes de salvar.");
       return;
     }
-    const nova: Cotacao = {
-      id: gerarId(),
-      salvoEm: new Date().toISOString(),
-      gerais,
-      cards,
-    };
-    const atual = [nova, ...getCotacoes()];
-    if (setCotacoes(atual)) {
-      setLista(atual);
+    if (salvarCotacao(gerais, cards)) {
       toast.success("Cotação salva com sucesso.");
     } else {
       toast.error("Não foi possível salvar (armazenamento indisponível).");
     }
   };
+
 
   const novaCotacao = () =>
     setConfirm({
@@ -432,16 +471,30 @@ function Index() {
             >
               <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Ver Cotações
             </button>
-            {!isApprover && (
-              <button
-                type="button"
-                disabled={enviando}
-                onClick={() => submeter(gerais, cards)}
-                className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:opacity-60"
-              >
-                <Send className="mr-2 inline h-4 w-4 align-[-3px]" />Submeter a aprovação
-              </button>
-            )}
+            {(() => {
+              const chave = `atual:${gerais.cliente}|${gerais.origem}|${gerais.destino}`;
+              const jaEnviada = !isApprover && submetidas[chave] === true;
+              return (
+                <button
+                  type="button"
+                  disabled={enviando || jaEnviada}
+                  onClick={() => submeter(gerais, cards, chave)}
+                  className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isApprover ? (
+                    <>
+                      <Check className="mr-2 inline h-4 w-4 align-[-3px]" />Aprovar
+                    </>
+                  ) : (
+                    <>
+                      <Send className="mr-2 inline h-4 w-4 align-[-3px]" />
+                      {jaEnviada ? "Submetida a aprovação" : "Submeter a aprovação"}
+                    </>
+                  )}
+                </button>
+              );
+            })()}
+
             {isApprover && (
               <button
                 type="button"
@@ -598,7 +651,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
-                    <th className="border-b-2 border-line p-2" colSpan={isApprover ? 2 : 3} />
+                    <th className="border-b-2 border-line p-2" colSpan={3} />
                   </tr>
                 </thead>
                 <tbody>
@@ -627,18 +680,28 @@ function Index() {
                           Carregar
                         </button>
                       </td>
-                      {!isApprover && (
-                        <td className="border-b border-line p-2">
-                          <button
-                            type="button"
-                            disabled={enviando}
-                            onClick={() => submeter(item.gerais, item.cards)}
-                            className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-60"
-                          >
-                            <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Submeter a aprovação
-                          </button>
-                        </td>
-                      )}
+                      <td className="border-b border-line p-2">
+                        <button
+                          type="button"
+                          disabled={enviando || (!isApprover && submetidas[item.id] === true)}
+                          onClick={() => submeter(item.gerais, item.cards, item.id)}
+                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {isApprover ? (
+                            <>
+                              <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
+                            </>
+                          ) : (
+                            <>
+                              <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
+                              {submetidas[item.id] === true
+                                ? "Submetida a aprovação"
+                                : "Submeter a aprovação"}
+                            </>
+                          )}
+                        </button>
+                      </td>
+
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
