@@ -1,4 +1,5 @@
 import { auth, defineMcp } from "@lovable.dev/mcp-js";
+import type { AnyToolDefinition } from "@lovable.dev/mcp-js";
 import listCotacoesTool from "./tools/list-cotacoes";
 import getCotacaoTool from "./tools/get-cotacao";
 import decidirCotacaoTool from "./tools/decidir-cotacao";
@@ -16,5 +17,5 @@ export default defineMcp({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated",
   }),
-  tools: [listCotacoesTool, getCotacaoTool, decidirCotacaoTool],
+  tools: [listCotacoesTool, getCotacaoTool, decidirCotacaoTool] as AnyToolDefinition[],
 });
