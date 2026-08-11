@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
+import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
@@ -637,7 +637,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
-                    <th className="border-b-2 border-line p-2" colSpan={isApprover ? 2 : 3} />
+                    <th className="border-b-2 border-line p-2" colSpan={3} />
                   </tr>
                 </thead>
                 <tbody>
