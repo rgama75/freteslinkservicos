@@ -148,20 +148,38 @@ function Index() {
   useEffect(() => {
     setLista(getCotacoes());
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    void carregarSubmissoes();
   }, []);
 
   const carregarSubmissoes = async () => {
     try {
       setSubmissoes(await listarSubmissoes());
     } catch {
-      toast.error("Não foi possível carregar as submissões.");
+      /* sem permissão ou offline */
     }
+  };
+
+  const chaveSub = (cliente: string, origem: string, destino: string) =>
+    `${(cliente || "").trim().toLowerCase()}|${(origem || "").trim().toLowerCase()}|${(destino || "").trim().toLowerCase()}`;
+
+  const statusPorCotacao = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const s of [...submissoes].reverse()) {
+      map[chaveSub(s.cliente, s.origem, s.destino)] = s.status;
+    }
+    return map;
+  }, [submissoes]);
+
+  const removerLocal = (id: string) => {
+    const atual = getCotacoes().filter((x) => x.id !== id);
+    if (setCotacoes(atual)) setLista(atual);
   };
 
   const submeter = async (
     g: DadosGerais,
     c: Record<number, DadosCard>,
     chave: string,
+    cotacaoId?: string,
   ) => {
     if (!g.cliente.trim()) {
       toast.warning("Informe o Nome do Cliente antes de submeter à aprovação.");
@@ -171,12 +189,17 @@ function Index() {
     try {
       await submeterAprovacao(g, c, isApprover ? "aprovada" : "pendente");
       if (isApprover) {
-        salvarCotacao(g, c);
-        toast.success("Cotação aprovada e salva.");
+        if (cotacaoId) {
+          removerLocal(cotacaoId);
+        } else {
+          salvarCotacao(g, c);
+        }
+        toast.success("Cotação aprovada e enviada para o fluxo de aprovação.");
         await carregarSubmissoes();
       } else {
         setSubmetidas((prev) => ({ ...prev, [chave]: true }));
         toast.success(`Cotação submetida à aprovação de ${APPROVER_EMAIL}.`);
+        await carregarSubmissoes();
       }
     } catch {
       toast.error(
@@ -199,6 +222,7 @@ function Index() {
       toast.error("Não foi possível registrar a decisão.");
     }
   };
+
 
 
   const setG = (patch: Partial<DadosGerais>) =>
@@ -651,6 +675,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
+                    <th className="border-b-2 border-line p-2">Status</th>
                     <th className="border-b-2 border-line p-2" colSpan={3} />
                   </tr>
                 </thead>
@@ -671,6 +696,15 @@ function Index() {
                       <td className="border-b border-line p-2">
                         {new Date(item.salvoEm).toLocaleString("pt-BR")}
                       </td>
+                      <td className="border-b border-line p-2 font-semibold capitalize">
+                        {statusPorCotacao[
+                          chaveSub(
+                            item.gerais.cliente,
+                            item.gerais.origem,
+                            item.gerais.destino,
+                          )
+                        ] ?? "—"}
+                      </td>
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
@@ -684,7 +718,8 @@ function Index() {
                         <button
                           type="button"
                           disabled={enviando || (!isApprover && submetidas[item.id] === true)}
-                          onClick={() => submeter(item.gerais, item.cards, item.id)}
+                          onClick={() => submeter(item.gerais, item.cards, item.id, item.id)}
+
                           className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isApprover ? (
@@ -767,8 +802,8 @@ function Index() {
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
-                          disabled={s.status === "aprovada"}
                           onClick={() => decidir(s.id, "aprovada")}
+
                           className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
                         >
                           Aprovar
