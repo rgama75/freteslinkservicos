@@ -224,6 +224,37 @@ function Index() {
     }
   };
 
+  // Aprovador decide direto na aba "Ver Cotações"
+  const decidirLocal = async (
+    g: DadosGerais,
+    c: Record<number, DadosCard>,
+    status: "aprovada" | "reprovada",
+  ) => {
+    if (!g.cliente.trim()) {
+      toast.warning("Informe o Nome do Cliente antes de decidir.");
+      return;
+    }
+    setEnviando(true);
+    try {
+      const chave = chaveSub(g.cliente, g.origem, g.destino);
+      const existente = submissoes.find(
+        (s) => chaveSub(s.cliente, s.origem, s.destino) === chave,
+      );
+      if (existente) {
+        await decidirSubmissao(existente.id, status);
+      } else {
+        await submeterAprovacao(g, c, status);
+      }
+      toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
+      await carregarSubmissoes();
+    } catch {
+      toast.error("Não foi possível registrar a decisão.");
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+
 
 
   const setG = (patch: Partial<DadosGerais>) =>
