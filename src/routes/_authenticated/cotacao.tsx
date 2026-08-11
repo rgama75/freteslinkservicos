@@ -675,6 +675,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
+                    <th className="border-b-2 border-line p-2">Status</th>
                     <th className="border-b-2 border-line p-2" colSpan={3} />
                   </tr>
                 </thead>
@@ -695,6 +696,15 @@ function Index() {
                       <td className="border-b border-line p-2">
                         {new Date(item.salvoEm).toLocaleString("pt-BR")}
                       </td>
+                      <td className="border-b border-line p-2 font-semibold capitalize">
+                        {statusPorCotacao[
+                          chaveSub(
+                            item.gerais.cliente,
+                            item.gerais.origem,
+                            item.gerais.destino,
+                          )
+                        ] ?? "—"}
+                      </td>
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
@@ -708,7 +718,8 @@ function Index() {
                         <button
                           type="button"
                           disabled={enviando || (!isApprover && submetidas[item.id] === true)}
-                          onClick={() => submeter(item.gerais, item.cards, item.id)}
+                          onClick={() => submeter(item.gerais, item.cards, item.id, item.id)}
+
                           className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {isApprover ? (
