@@ -187,7 +187,7 @@ function Index() {
     }
     setEnviando(true);
     try {
-      await submeterAprovacao(g, c, isApprover ? "aprovada" : "pendente");
+      await submeterAprovacao(g, c, "pendente");
       if (isApprover) {
         if (cotacaoId) {
           removerLocal(cotacaoId);
@@ -213,9 +213,23 @@ function Index() {
   };
 
 
-  const decidir = async (id: string, status: "aprovada" | "reprovada") => {
+  const pendentes = useMemo(
+    () => submissoes.filter((s) => s.status === "pendente"),
+    [submissoes],
+  );
+
+  const decidir = async (s: Submissao, status: "aprovada" | "reprovada") => {
     try {
-      await decidirSubmissao(id, status);
+      await decidirSubmissao(s.id, status);
+      const dados = s.dados as { gerais?: DadosGerais; cards?: Record<number, DadosCard> } | null;
+      if (dados?.gerais && dados?.cards) {
+        const existe = getCotacoes().some(
+          (x) =>
+            chaveSub(x.gerais.cliente, x.gerais.origem, x.gerais.destino) ===
+            chaveSub(s.cliente, s.origem, s.destino),
+        );
+        if (!existe) salvarCotacao(dados.gerais, dados.cards);
+      }
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
     } catch {
