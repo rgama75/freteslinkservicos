@@ -803,7 +803,7 @@ function Index() {
                         <button
                           type="button"
                           onClick={() => decidir(s.id, "aprovada")}
-                          onClick={() => decidir(s.id, "aprovada")}
+
                           className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
                         >
                           Aprovar
