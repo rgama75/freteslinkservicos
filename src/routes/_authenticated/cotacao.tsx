@@ -199,6 +199,40 @@ function Index() {
     }
   };
 
+  const [selecionados, setSelecionados] = useState<Record<string, boolean>>({});
+
+  const toggleSelecionado = (id: string) =>
+    setSelecionados((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const submeterSelecionadas = async () => {
+    const ids = Object.keys(selecionados).filter((id) => selecionados[id]);
+    const itens = lista.filter((c) => ids.includes(c.id) && submetidas[c.id] !== true);
+    if (itens.length === 0) return;
+    setEnviando(true);
+    let ok = 0;
+    try {
+      for (const item of itens) {
+        if (!item.gerais.cliente.trim()) continue;
+        try {
+          await submeterAprovacao(item.gerais, item.cards, "pendente");
+          setSubmetidas((prev) => ({ ...prev, [item.id]: true }));
+          ok++;
+        } catch {
+          /* segue para as demais */
+        }
+      }
+      if (ok > 0) {
+        toast.success(`${ok} cotação(ões) submetida(s) à aprovação de ${APPROVER_EMAIL}.`);
+        setSelecionados({});
+        await carregarSubmissoes();
+      } else {
+        toast.error("Não foi possível submeter as cotações selecionadas.");
+      }
+    } finally {
+      setEnviando(false);
+    }
+  };
+
 
   const pendentes = useMemo(
     () => submissoes.filter((s) => s.status === "pendente"),
@@ -345,6 +379,17 @@ function Index() {
       }),
     [lista, filtros],
   );
+
+  const selecionaveis = useMemo(
+    () => filtrada.filter((c) => submetidas[c.id] !== true),
+    [filtrada, submetidas],
+  );
+
+  const totalSelecionadas = useMemo(
+    () => selecionaveis.filter((c) => selecionados[c.id] === true).length,
+    [selecionaveis, selecionados],
+  );
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -694,6 +739,41 @@ function Index() {
               onChange={(e) => setFiltros({ ...filtros, data: e.target.value })}
             />
           </div>
+          {!isApprover && filtrada.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-navy">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-navy"
+                  checked={
+                    selecionaveis.length > 0 &&
+                    selecionaveis.every((c) => selecionados[c.id])
+                  }
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const next: Record<string, boolean> = { ...selecionados };
+                      for (const c of selecionaveis) next[c.id] = true;
+                      setSelecionados(next);
+                    } else {
+                      setSelecionados({});
+                    }
+                  }}
+                />
+                Selecionar todas
+              </label>
+              {totalSelecionadas > 1 && (
+                <button
+                  type="button"
+                  disabled={enviando}
+                  onClick={submeterSelecionadas}
+                  className="rounded-[5px] border border-navy bg-navy px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
+                  Submeter todas as cotações selecionadas ({totalSelecionadas})
+                </button>
+              )}
+            </div>
+          )}
           {filtrada.length === 0 ? (
             <div className="p-8 text-center text-[13px] text-ink-soft">
               Nenhuma cotação encontrada.
@@ -703,6 +783,7 @@ function Index() {
               <table className="w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="text-left text-ink-soft">
+                    {!isApprover && <th className="border-b-2 border-line p-2" />}
                     <th className="border-b-2 border-line p-2">Cliente</th>
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
@@ -711,10 +792,24 @@ function Index() {
                     <th className="border-b-2 border-line p-2" colSpan={3} />
                   </tr>
                 </thead>
+
                 <tbody>
                   {filtrada.map((item) => (
                     <tr key={item.id} className="hover:bg-secondary">
+                      {!isApprover && (
+                        <td className="border-b border-line p-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-navy"
+                            aria-label={`Marcar cotação de ${item.gerais.cliente || "cliente"}`}
+                            disabled={submetidas[item.id] === true}
+                            checked={selecionados[item.id] === true}
+                            onChange={() => toggleSelecionado(item.id)}
+                          />
+                        </td>
+                      )}
                       <td className="border-b border-line p-2">
+
                         {item.gerais.cliente || "—"}
                       </td>
                       <td className="border-b border-line p-2">
@@ -782,15 +877,18 @@ function Index() {
                       </td>
 
 
-                      <td className="border-b border-line p-2">
-                        <button
-                          type="button"
-                          onClick={() => apagar(item)}
-                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
-                        >
-                          <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
-                        </button>
-                      </td>
+                      {isApprover && (
+                        <td className="border-b border-line p-2">
+                          <button
+                            type="button"
+                            onClick={() => apagar(item)}
+                            className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
+                          >
+                            <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
+                          </button>
+                        </td>
+                      )}
+
                     </tr>
                   ))}
                 </tbody>

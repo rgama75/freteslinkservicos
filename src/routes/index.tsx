@@ -14,9 +14,11 @@ function destinoSeguro(next: unknown): string | null {
 }
 
 export const Route = createFileRoute("/")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    next: destinoSeguro(s['next']) ?? undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+    const next = destinoSeguro(s['next']);
+    return next ? { next } : {};
+  },
+
   head: () => ({
     meta: [
       { title: "Acessar | Sistema de Precificação de Fretes" },
