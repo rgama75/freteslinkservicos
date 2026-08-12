@@ -242,22 +242,18 @@ function Index() {
 
 
   const pendentes = useMemo(
-    () => submissoes.filter((s) => s.status === "pendente"),
-    [submissoes],
+    () => submissoes.filter((s) => s.status === "pendente" || decisaoUI[s.id]),
+    [submissoes, decisaoUI],
   );
 
   const decidir = async (s: Submissao, status: "aprovada" | "reprovada") => {
     try {
       await decidirSubmissao(s.id, status);
-      const dados = s.dados as { gerais?: DadosGerais; cards?: Record<number, DadosCard> } | null;
-      if (dados?.gerais && dados?.cards) {
-        const existe = getCotacoes().some(
-          (x) =>
-            chaveSub(x.gerais.cliente, x.gerais.origem, x.gerais.destino) ===
-            chaveSub(s.cliente, s.origem, s.destino),
-        );
-        if (!existe) salvarCotacao(dados.gerais, dados.cards);
-      }
+      setDecisaoUI((prev) => ({
+        ...prev,
+        [s.id]: status,
+        [chaveSub(s.cliente, s.origem, s.destino)]: status,
+      }));
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
     } catch {
@@ -265,7 +261,7 @@ function Index() {
     }
   };
 
-  // Aprovador decide direto na aba "Ver Cotações"
+  // Aprovador decide direto na aba "Ver Cotações" ou no painel principal
   const decidirLocal = async (
     g: DadosGerais,
     c: Record<number, DadosCard>,
@@ -286,6 +282,7 @@ function Index() {
       } else {
         await submeterAprovacao(g, c, status);
       }
+      setDecisaoUI((prev) => ({ ...prev, [chave]: status }));
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
     } catch {
@@ -294,6 +291,7 @@ function Index() {
       setEnviando(false);
     }
   };
+
 
 
 
