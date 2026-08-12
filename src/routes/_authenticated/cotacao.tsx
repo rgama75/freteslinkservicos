@@ -802,119 +802,93 @@ function Index() {
                     <th className="border-b-2 border-line p-2">Destino</th>
                     <th className="border-b-2 border-line p-2">Salvo em</th>
                     <th className="border-b-2 border-line p-2">Status</th>
-                    <th className="border-b-2 border-line p-2" colSpan={3} />
+                    <th className="border-b-2 border-line p-2" colSpan={2}>Ações</th>
                   </tr>
                 </thead>
 
                 <tbody>
-                  {filtrada.map((item) => (
-                    <tr key={item.id} className="hover:bg-secondary">
-                      {!isApprover && (
-                        <td className="border-b border-line p-2">
-                          <input
-                            type="checkbox"
-                            className="h-4 w-4 accent-navy"
-                            aria-label={`Marcar cotação de ${item.gerais.cliente || "cliente"}`}
-                            disabled={submetidas[item.id] === true}
-                            checked={selecionados[item.id] === true}
-                            onChange={() => toggleSelecionado(item.id)}
-                          />
-                        </td>
-                      )}
-                      <td className="border-b border-line p-2">
-
-                        {item.gerais.cliente || "—"}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {item.gerais.origem || "—"}
-                        {item.gerais.ufOrigem ? "/" + item.gerais.ufOrigem : ""}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {item.gerais.destino || "—"}
-                        {item.gerais.ufDestino ? "/" + item.gerais.ufDestino : ""}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {new Date(item.salvoEm).toLocaleString("pt-BR")}
-                      </td>
-                      <td className="border-b border-line p-2 font-semibold capitalize">
-                        {statusPorCotacao[
-                          chaveSub(
-                            item.gerais.cliente,
-                            item.gerais.origem,
-                            item.gerais.destino,
-                          )
-                        ] ?? "pendente"}
-                      </td>
-                      <td className="border-b border-line p-2">
-                        <button
-                          type="button"
-                          onClick={() => carregar(item)}
-                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground"
-                        >
-                          Carregar
-                        </button>
-                      </td>
-                      <td className="border-b border-line p-2">
-                        {isApprover ? (
-                          (() => {
-                            const chave = chaveSub(
-                              item.gerais.cliente,
-                              item.gerais.origem,
-                              item.gerais.destino,
-                            );
-                            const dec = decisaoUI[chave] ?? statusPorCotacao[chave];
-                            return (
-                              <div className="flex gap-1">
-                                <button
-                                  type="button"
-                                  disabled={enviando}
-                                  onClick={() => decidirLocal(item.gerais, item.cards, "aprovada")}
-                                  className={`rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(dec === "aprovada")}`}
-                                >
-                                  <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={enviando}
-                                  onClick={() => decidirLocal(item.gerais, item.cards, "reprovada")}
-                                  className={`rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(dec === "reprovada")}`}
-                                >
-                                  <X className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Reprovar
-                                </button>
-                              </div>
-                            );
-                          })()
-                        ) : (
-
-                          <button
-                            type="button"
-                            disabled={enviando || submetidas[item.id] === true}
-                            onClick={() => submeter(item.gerais, item.cards, item.id, item.id)}
-                            className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                          >
-                            <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
-                            {submetidas[item.id] === true
-                              ? "Submetida a aprovação"
-                              : "Submeter a aprovação"}
-                          </button>
+                  {filtrada.map((item) => {
+                    const statusCotacao =
+                      statusPorCotacao[
+                        chaveSub(
+                          item.gerais.cliente,
+                          item.gerais.origem,
+                          item.gerais.destino,
+                        )
+                      ] ?? "pendente";
+                    const statusColorClass =
+                      statusCotacao === "aprovada"
+                        ? "text-success"
+                        : statusCotacao === "reprovada"
+                          ? "text-danger"
+                          : "text-ink-soft";
+                    return (
+                      <tr key={item.id} className="hover:bg-secondary">
+                        {!isApprover && (
+                          <td className="border-b border-line p-2">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-navy"
+                              aria-label={`Marcar cotação de ${item.gerais.cliente || "cliente"}`}
+                              disabled={submetidas[item.id] === true}
+                              checked={selecionados[item.id] === true}
+                              onChange={() => toggleSelecionado(item.id)}
+                            />
+                          </td>
                         )}
-                      </td>
-
-
-                      {isApprover && (
+                        <td className="border-b border-line p-2">
+                          {item.gerais.cliente || "—"}
+                        </td>
+                        <td className="border-b border-line p-2">
+                          {item.gerais.origem || "—"}
+                          {item.gerais.ufOrigem ? "/" + item.gerais.ufOrigem : ""}
+                        </td>
+                        <td className="border-b border-line p-2">
+                          {item.gerais.destino || "—"}
+                          {item.gerais.ufDestino ? "/" + item.gerais.ufDestino : ""}
+                        </td>
+                        <td className="border-b border-line p-2">
+                          {new Date(item.salvoEm).toLocaleString("pt-BR")}
+                        </td>
+                        <td className={`border-b border-line p-2 font-semibold capitalize ${statusColorClass}`}>
+                          {statusCotacao}
+                        </td>
                         <td className="border-b border-line p-2">
                           <button
                             type="button"
-                            onClick={() => apagar(item)}
-                            className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
+                            onClick={() => carregar(item)}
+                            className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground"
                           >
-                            <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
+                            Carregar
                           </button>
                         </td>
-                      )}
-
-                    </tr>
-                  ))}
+                        <td className="border-b border-line p-2">
+                          {!isApprover && (
+                            <button
+                              type="button"
+                              disabled={enviando || submetidas[item.id] === true}
+                              onClick={() => submeter(item.gerais, item.cards, item.id, item.id)}
+                              className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
+                              {submetidas[item.id] === true
+                                ? "Submetida a aprovação"
+                                : "Submeter a aprovação"}
+                            </button>
+                          )}
+                          {isApprover && (
+                            <button
+                              type="button"
+                              onClick={() => apagar(item)}
+                              className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
+                            >
+                              <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
