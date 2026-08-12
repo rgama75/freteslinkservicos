@@ -843,25 +843,36 @@ function Index() {
                       </td>
                       <td className="border-b border-line p-2">
                         {isApprover ? (
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              disabled={enviando}
-                              onClick={() => decidirLocal(item.gerais, item.cards, "aprovada")}
-                              className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
-                            </button>
-                            <button
-                              type="button"
-                              disabled={enviando}
-                              onClick={() => decidirLocal(item.gerais, item.cards, "reprovada")}
-                              className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <X className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Reprovar
-                            </button>
-                          </div>
+                          (() => {
+                            const chave = chaveSub(
+                              item.gerais.cliente,
+                              item.gerais.origem,
+                              item.gerais.destino,
+                            );
+                            const dec = decisaoUI[chave] ?? statusPorCotacao[chave];
+                            return (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  disabled={enviando}
+                                  onClick={() => decidirLocal(item.gerais, item.cards, "aprovada")}
+                                  className={`rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(dec === "aprovada")}`}
+                                >
+                                  <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={enviando}
+                                  onClick={() => decidirLocal(item.gerais, item.cards, "reprovada")}
+                                  className={`rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(dec === "reprovada")}`}
+                                >
+                                  <X className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Reprovar
+                                </button>
+                              </div>
+                            );
+                          })()
                         ) : (
+
                           <button
                             type="button"
                             disabled={enviando || submetidas[item.id] === true}
