@@ -55,10 +55,17 @@ function InputRow({
   onChange: (v: string) => void;
   type?: "text" | "date";
 }) {
+  const inputId = React.useId();
   return (
     <div className="my-1 flex items-center justify-between gap-2.5 rounded-[7px] border border-warn-line bg-warn-field px-2.5 py-1.5">
-      <div className="text-[12.5px] font-semibold text-warn-ink">{label}</div>
+      <label
+        htmlFor={inputId}
+        className="text-[12.5px] font-semibold text-warn-ink"
+      >
+        {label}
+      </label>
       <input
+        id={inputId}
         type={type}
         inputMode={type === "text" ? "decimal" : undefined}
         placeholder={type === "text" ? "0,00" : undefined}
