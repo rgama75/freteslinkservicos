@@ -940,13 +940,13 @@ function Index() {
                         {new Date(s.created_at).toLocaleString("pt-BR")}
                       </td>
                       <td className="border-b border-line p-2 font-semibold capitalize">
-                        {s.status}
+                        {decisaoUI[s.id] ?? s.status}
                       </td>
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
                           onClick={() => decidir(s, "aprovada")}
-                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
+                          className={`rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground ${marcaDagua(decisaoUI[s.id] === "aprovada")}`}
                         >
                           Aprovar
                         </button>
@@ -955,11 +955,18 @@ function Index() {
                         <button
                           type="button"
                           onClick={() => decidir(s, "reprovada")}
-                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:opacity-50"
+                          className={`rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground ${marcaDagua(decisaoUI[s.id] === "reprovada")}`}
                         >
                           Reprovar
                         </button>
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
                     </tr>
                   ))}
                 </tbody>
