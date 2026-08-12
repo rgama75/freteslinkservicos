@@ -86,6 +86,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
           "Cotação de fretes rodoviários com piso ANTT, impostos, viabilidade e margem.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Link Serviços" },
+      { property: "og:title", content: "Sistema de Precificação de Fretes" },
+      {
+        property: "og:description",
+        content:
+          "Cotação de fretes rodoviários com piso ANTT, impostos, viabilidade e margem.",
+      },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
@@ -100,6 +107,31 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: appCss,
       },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+    ],
+    scripts: [
+      {
+        type: "application/ld+json",
+        children: JSON.stringify({
+          "@context": "https://schema.org",
+          "@graph": [
+            {
+              "@type": "Organization",
+              name: "Link Serviços",
+              url: "https://freteslinkservicos.lovable.app",
+              description:
+                "Serviço de precificação e cotação de fretes rodoviários com base no piso mínimo ANTT.",
+            },
+            {
+              "@type": "WebSite",
+              name: "Sistema de Precificação de Fretes",
+              url: "https://freteslinkservicos.lovable.app",
+              description:
+                "Plataforma de cotação de fretes rodoviários com piso ANTT, impostos, pedágio, viabilidade e margem operacional.",
+              publisher: { "@type": "Organization", name: "Link Serviços" },
+            },
+          ],
+        }),
+      },
     ],
   }),
 
