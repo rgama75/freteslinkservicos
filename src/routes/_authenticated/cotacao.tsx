@@ -199,6 +199,40 @@ function Index() {
     }
   };
 
+  const [selecionados, setSelecionados] = useState<Record<string, boolean>>({});
+
+  const toggleSelecionado = (id: string) =>
+    setSelecionados((prev) => ({ ...prev, [id]: !prev[id] }));
+
+  const submeterSelecionadas = async () => {
+    const ids = Object.keys(selecionados).filter((id) => selecionados[id]);
+    const itens = lista.filter((c) => ids.includes(c.id) && submetidas[c.id] !== true);
+    if (itens.length === 0) return;
+    setEnviando(true);
+    let ok = 0;
+    try {
+      for (const item of itens) {
+        if (!item.gerais.cliente.trim()) continue;
+        try {
+          await submeterAprovacao(item.gerais, item.cards, "pendente");
+          setSubmetidas((prev) => ({ ...prev, [item.id]: true }));
+          ok++;
+        } catch {
+          /* segue para as demais */
+        }
+      }
+      if (ok > 0) {
+        toast.success(`${ok} cotação(ões) submetida(s) à aprovação de ${APPROVER_EMAIL}.`);
+        setSelecionados({});
+        await carregarSubmissoes();
+      } else {
+        toast.error("Não foi possível submeter as cotações selecionadas.");
+      }
+    } finally {
+      setEnviando(false);
+    }
+  };
+
 
   const pendentes = useMemo(
     () => submissoes.filter((s) => s.status === "pendente"),
