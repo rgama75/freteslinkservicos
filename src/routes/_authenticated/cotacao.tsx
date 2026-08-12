@@ -170,6 +170,13 @@ function Index() {
     return map;
   }, [submissoes]);
 
+  // Decisões tomadas nesta sessão (para marca d'água nos botões clicados)
+  const [decisaoUI, setDecisaoUI] = useState<Record<string, "aprovada" | "reprovada">>({});
+  const marcaDagua = (ativo: boolean) =>
+    ativo ? "opacity-40 saturate-50 pointer-events-none" : "";
+
+
+
 
   const submeter = async (
     g: DadosGerais,
