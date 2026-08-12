@@ -380,6 +380,17 @@ function Index() {
     [lista, filtros],
   );
 
+  const selecionaveis = useMemo(
+    () => filtrada.filter((c) => submetidas[c.id] !== true),
+    [filtrada, submetidas],
+  );
+
+  const totalSelecionadas = useMemo(
+    () => selecionaveis.filter((c) => selecionados[c.id] === true).length,
+    [selecionaveis, selecionados],
+  );
+
+
   return (
     <div className="min-h-screen bg-background">
       <div
