@@ -966,13 +966,6 @@ function Index() {
               </table>
             </div>
           )}
-
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
         </DialogContent>
       </Dialog>
 
