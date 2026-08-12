@@ -729,24 +729,28 @@ function Index() {
           <div className="mb-4 grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] gap-3">
             <input
               className={fieldCls}
+              aria-label="Filtrar por cliente"
               placeholder="Filtrar por cliente"
               value={filtros.cliente}
               onChange={(e) => setFiltros({ ...filtros, cliente: e.target.value })}
             />
             <input
               className={fieldCls}
+              aria-label="Filtrar por origem"
               placeholder="Filtrar por origem"
               value={filtros.origem}
               onChange={(e) => setFiltros({ ...filtros, origem: e.target.value })}
             />
             <input
               className={fieldCls}
+              aria-label="Filtrar por destino"
               placeholder="Filtrar por destino"
               value={filtros.destino}
               onChange={(e) => setFiltros({ ...filtros, destino: e.target.value })}
             />
             <input
               type="date"
+              aria-label="Filtrar por data"
               className={fieldCls}
               value={filtros.data}
               onChange={(e) => setFiltros({ ...filtros, data: e.target.value })}
