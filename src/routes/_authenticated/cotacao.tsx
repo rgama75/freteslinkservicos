@@ -796,7 +796,20 @@ function Index() {
                 <tbody>
                   {filtrada.map((item) => (
                     <tr key={item.id} className="hover:bg-secondary">
+                      {!isApprover && (
+                        <td className="border-b border-line p-2">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-navy"
+                            aria-label={`Marcar cotação de ${item.gerais.cliente || "cliente"}`}
+                            disabled={submetidas[item.id] === true}
+                            checked={selecionados[item.id] === true}
+                            onChange={() => toggleSelecionado(item.id)}
+                          />
+                        </td>
+                      )}
                       <td className="border-b border-line p-2">
+
                         {item.gerais.cliente || "—"}
                       </td>
                       <td className="border-b border-line p-2">
