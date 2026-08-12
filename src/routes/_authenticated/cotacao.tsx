@@ -575,12 +575,19 @@ function Index() {
             {(() => {
               const chave = `atual:${gerais.cliente}|${gerais.origem}|${gerais.destino}`;
               const jaEnviada = !isApprover && submetidas[chave] === true;
+              const chaveA = chaveSub(gerais.cliente, gerais.origem, gerais.destino);
+              const aprovada =
+                isApprover && (decisaoUI[chaveA] ?? statusPorCotacao[chaveA]) === "aprovada";
               return (
                 <button
                   type="button"
                   disabled={enviando || jaEnviada}
-                  onClick={() => submeter(gerais, cards, chave)}
-                  className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() =>
+                    isApprover
+                      ? decidirLocal(gerais, cards, "aprovada")
+                      : submeter(gerais, cards, chave)
+                  }
+                  className={`rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(aprovada)}`}
                 >
                   {isApprover ? (
                     <>
@@ -595,6 +602,7 @@ function Index() {
                 </button>
               );
             })()}
+
 
             {isApprover && (
               <button
