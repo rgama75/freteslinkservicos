@@ -55,7 +55,7 @@ function InputRow({
   onChange: (v: string) => void;
   type?: "text" | "date";
 }) {
-  const inputId = React.useId();
+  const inputId = useId();
   return (
     <div className="my-1 flex items-center justify-between gap-2.5 rounded-[7px] border border-warn-line bg-warn-field px-2.5 py-1.5">
       <label
