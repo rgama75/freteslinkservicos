@@ -728,6 +728,41 @@ function Index() {
               onChange={(e) => setFiltros({ ...filtros, data: e.target.value })}
             />
           </div>
+          {!isApprover && filtrada.length > 0 && (
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-navy">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 accent-navy"
+                  checked={
+                    selecionaveis.length > 0 &&
+                    selecionaveis.every((c) => selecionados[c.id])
+                  }
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      const next: Record<string, boolean> = { ...selecionados };
+                      for (const c of selecionaveis) next[c.id] = true;
+                      setSelecionados(next);
+                    } else {
+                      setSelecionados({});
+                    }
+                  }}
+                />
+                Selecionar todas
+              </label>
+              {totalSelecionadas > 1 && (
+                <button
+                  type="button"
+                  disabled={enviando}
+                  onClick={submeterSelecionadas}
+                  className="rounded-[5px] border border-navy bg-navy px-3 py-1.5 text-[11.5px] font-bold text-primary-foreground hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Send className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
+                  Submeter todas as cotações selecionadas ({totalSelecionadas})
+                </button>
+              )}
+            </div>
+          )}
           {filtrada.length === 0 ? (
             <div className="p-8 text-center text-[13px] text-ink-soft">
               Nenhuma cotação encontrada.
@@ -737,6 +772,7 @@ function Index() {
               <table className="w-full border-collapse text-[12.5px]">
                 <thead>
                   <tr className="text-left text-ink-soft">
+                    {!isApprover && <th className="border-b-2 border-line p-2" />}
                     <th className="border-b-2 border-line p-2">Cliente</th>
                     <th className="border-b-2 border-line p-2">Origem</th>
                     <th className="border-b-2 border-line p-2">Destino</th>
@@ -745,6 +781,7 @@ function Index() {
                     <th className="border-b-2 border-line p-2" colSpan={3} />
                   </tr>
                 </thead>
+
                 <tbody>
                   {filtrada.map((item) => (
                     <tr key={item.id} className="hover:bg-secondary">
