@@ -25,6 +25,23 @@ const oauthApi = () =>
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
+  head: () => ({
+    meta: [
+      { title: "Autorizar acesso | Precificação de Fretes" },
+      {
+        name: "description",
+        content:
+          "Revise e autorize o acesso de um aplicativo às suas cotações de frete.",
+      },
+      { property: "og:title", content: "Autorizar acesso | Precificação de Fretes" },
+      {
+        property: "og:description",
+        content:
+          "Revise e autorize o acesso de um aplicativo às suas cotações de frete.",
+      },
+      { name: "robots", content: "noindex" },
+    ],
+  }),
   validateSearch: (s: Record<string, unknown>) => ({
     authorization_id:
       typeof s['authorization_id'] === "string" ? s['authorization_id'] : "",
