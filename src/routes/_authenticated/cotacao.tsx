@@ -877,15 +877,18 @@ function Index() {
                       </td>
 
 
-                      <td className="border-b border-line p-2">
-                        <button
-                          type="button"
-                          onClick={() => apagar(item)}
-                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
-                        >
-                          <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
-                        </button>
-                      </td>
+                      {isApprover && (
+                        <td className="border-b border-line p-2">
+                          <button
+                            type="button"
+                            onClick={() => apagar(item)}
+                            className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground"
+                          >
+                            <Trash2 className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Apagar
+                          </button>
+                        </td>
+                      )}
+
                     </tr>
                   ))}
                 </tbody>
