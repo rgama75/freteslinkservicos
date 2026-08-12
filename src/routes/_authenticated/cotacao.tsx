@@ -170,6 +170,13 @@ function Index() {
     return map;
   }, [submissoes]);
 
+  // Decisões tomadas nesta sessão (para marca d'água nos botões clicados)
+  const [decisaoUI, setDecisaoUI] = useState<Record<string, "aprovada" | "reprovada">>({});
+  const marcaDagua = (ativo: boolean) =>
+    ativo ? "opacity-40 saturate-50 pointer-events-none" : "";
+
+
+
 
   const submeter = async (
     g: DadosGerais,
@@ -235,22 +242,18 @@ function Index() {
 
 
   const pendentes = useMemo(
-    () => submissoes.filter((s) => s.status === "pendente"),
-    [submissoes],
+    () => submissoes.filter((s) => s.status === "pendente" || decisaoUI[s.id]),
+    [submissoes, decisaoUI],
   );
 
   const decidir = async (s: Submissao, status: "aprovada" | "reprovada") => {
     try {
       await decidirSubmissao(s.id, status);
-      const dados = s.dados as { gerais?: DadosGerais; cards?: Record<number, DadosCard> } | null;
-      if (dados?.gerais && dados?.cards) {
-        const existe = getCotacoes().some(
-          (x) =>
-            chaveSub(x.gerais.cliente, x.gerais.origem, x.gerais.destino) ===
-            chaveSub(s.cliente, s.origem, s.destino),
-        );
-        if (!existe) salvarCotacao(dados.gerais, dados.cards);
-      }
+      setDecisaoUI((prev) => ({
+        ...prev,
+        [s.id]: status,
+        [chaveSub(s.cliente, s.origem, s.destino)]: status,
+      }));
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
     } catch {
@@ -258,7 +261,7 @@ function Index() {
     }
   };
 
-  // Aprovador decide direto na aba "Ver Cotações"
+  // Aprovador decide direto na aba "Ver Cotações" ou no painel principal
   const decidirLocal = async (
     g: DadosGerais,
     c: Record<number, DadosCard>,
@@ -279,6 +282,7 @@ function Index() {
       } else {
         await submeterAprovacao(g, c, status);
       }
+      setDecisaoUI((prev) => ({ ...prev, [chave]: status }));
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
     } catch {
@@ -287,6 +291,7 @@ function Index() {
       setEnviando(false);
     }
   };
+
 
 
 
@@ -575,12 +580,19 @@ function Index() {
             {(() => {
               const chave = `atual:${gerais.cliente}|${gerais.origem}|${gerais.destino}`;
               const jaEnviada = !isApprover && submetidas[chave] === true;
+              const chaveA = chaveSub(gerais.cliente, gerais.origem, gerais.destino);
+              const aprovada =
+                isApprover && (decisaoUI[chaveA] ?? statusPorCotacao[chaveA]) === "aprovada";
               return (
                 <button
                   type="button"
                   disabled={enviando || jaEnviada}
-                  onClick={() => submeter(gerais, cards, chave)}
-                  className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() =>
+                    isApprover
+                      ? decidirLocal(gerais, cards, "aprovada")
+                      : submeter(gerais, cards, chave)
+                  }
+                  className={`rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(aprovada)}`}
                 >
                   {isApprover ? (
                     <>
@@ -595,6 +607,7 @@ function Index() {
                 </button>
               );
             })()}
+
 
             {isApprover && (
               <button
@@ -843,25 +856,36 @@ function Index() {
                       </td>
                       <td className="border-b border-line p-2">
                         {isApprover ? (
-                          <div className="flex gap-1">
-                            <button
-                              type="button"
-                              disabled={enviando}
-                              onClick={() => decidirLocal(item.gerais, item.cards, "aprovada")}
-                              className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
-                            </button>
-                            <button
-                              type="button"
-                              disabled={enviando}
-                              onClick={() => decidirLocal(item.gerais, item.cards, "reprovada")}
-                              className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <X className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Reprovar
-                            </button>
-                          </div>
+                          (() => {
+                            const chave = chaveSub(
+                              item.gerais.cliente,
+                              item.gerais.origem,
+                              item.gerais.destino,
+                            );
+                            const dec = decisaoUI[chave] ?? statusPorCotacao[chave];
+                            return (
+                              <div className="flex gap-1">
+                                <button
+                                  type="button"
+                                  disabled={enviando}
+                                  onClick={() => decidirLocal(item.gerais, item.cards, "aprovada")}
+                                  className={`rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(dec === "aprovada")}`}
+                                >
+                                  <Check className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Aprovar
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={enviando}
+                                  onClick={() => decidirLocal(item.gerais, item.cards, "reprovada")}
+                                  className={`rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60 ${marcaDagua(dec === "reprovada")}`}
+                                >
+                                  <X className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />Reprovar
+                                </button>
+                              </div>
+                            );
+                          })()
                         ) : (
+
                           <button
                             type="button"
                             disabled={enviando || submetidas[item.id] === true}
@@ -940,13 +964,13 @@ function Index() {
                         {new Date(s.created_at).toLocaleString("pt-BR")}
                       </td>
                       <td className="border-b border-line p-2 font-semibold capitalize">
-                        {s.status}
+                        {decisaoUI[s.id] ?? s.status}
                       </td>
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
                           onClick={() => decidir(s, "aprovada")}
-                          className="rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground disabled:opacity-50"
+                          className={`rounded-[5px] border border-navy bg-panel px-3 py-1 text-[11.5px] font-bold text-navy hover:bg-navy hover:text-primary-foreground ${marcaDagua(decisaoUI[s.id] === "aprovada")}`}
                         >
                           Aprovar
                         </button>
@@ -955,7 +979,7 @@ function Index() {
                         <button
                           type="button"
                           onClick={() => decidir(s, "reprovada")}
-                          className="rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground disabled:opacity-50"
+                          className={`rounded-[5px] border border-danger bg-panel px-3 py-1 text-[11.5px] font-bold text-danger hover:bg-danger hover:text-primary-foreground ${marcaDagua(decisaoUI[s.id] === "reprovada")}`}
                         >
                           Reprovar
                         </button>
