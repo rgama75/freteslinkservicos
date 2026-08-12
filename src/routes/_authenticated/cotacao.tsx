@@ -51,7 +51,7 @@ import {
 export const Route = createFileRoute("/_authenticated/cotacao")({
   head: () => ({
     meta: [
-      { title: "Precificação de Fretes | Cotação Rodoviária 5, 6, 7 e 9 Eixos" },
+      { title: "Precificação de Fretes | Cotação 5, 6, 7 e 9 Eixos" },
       {
         name: "description",
         content:
