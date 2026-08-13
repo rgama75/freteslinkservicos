@@ -1030,6 +1030,75 @@ function Index() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={usuariosModalOpen} onOpenChange={setUsuariosModalOpen}>
+        <DialogContent className="max-w-[900px]">
+          <DialogHeader>
+            <DialogTitle>Aprovação de Logins</DialogTitle>
+          </DialogHeader>
+          {usuarios.length === 0 ? (
+            <p className="text-[13px] text-ink-soft">Nenhum cadastro encontrado.</p>
+          ) : (
+            <div className="max-h-[60vh] overflow-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead>
+                  <tr className="text-left text-ink-soft">
+                    <th className="border-b border-line p-2">E-mail</th>
+                    <th className="border-b border-line p-2">Nome</th>
+                    <th className="border-b border-line p-2">Empresa</th>
+                    <th className="border-b border-line p-2">Cadastro</th>
+                    <th className="border-b border-line p-2">Status</th>
+                    <th className="border-b border-line p-2">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usuarios.map((u) => (
+                    <tr key={u.id} className="hover:bg-secondary">
+                      <td className="border-b border-line p-2">{u.email || "—"}</td>
+                      <td className="border-b border-line p-2">{u.full_name || "—"}</td>
+                      <td className="border-b border-line p-2">{u.company || "—"}</td>
+                      <td className="border-b border-line p-2">
+                        {new Date(u.created_at).toLocaleString("pt-BR")}
+                      </td>
+                      <td
+                        className={`border-b border-line p-2 font-semibold capitalize ${
+                          u.access_status === "aprovado"
+                            ? "text-success"
+                            : u.access_status === "reprovado"
+                              ? "text-danger"
+                              : "text-ink-soft"
+                        }`}
+                      >
+                        {u.access_status}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={u.access_status === "aprovado"}
+                            onClick={() => void decidirUsuario(u, "aprovado")}
+                            className="rounded-[6px] bg-navy px-3 py-1.5 text-[12px] font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={u.access_status === "reprovado"}
+                            onClick={() => void decidirUsuario(u, "reprovado")}
+                            className="rounded-[6px] border border-line px-3 py-1.5 text-[12px] font-bold text-danger transition-colors hover:bg-secondary disabled:opacity-40"
+                          >
+                            Reprovar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
 
       <AlertDialog
         open={confirm !== null}
