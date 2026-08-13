@@ -127,6 +127,30 @@ function Index() {
   const [email, setEmail] = useState<string | null>(null);
   const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
+  const [usuariosModalOpen, setUsuariosModalOpen] = useState(false);
+  const [usuarios, setUsuarios] = useState<UsuarioAcesso[]>([]);
+  const usuariosPendentes = usuarios.filter((u) => u.access_status === "pendente").length;
+
+  const carregarUsuarios = async () => {
+    try {
+      setUsuarios(await listarUsuarios());
+    } catch {
+      /* sem permissão */
+    }
+  };
+
+  const decidirUsuario = async (u: UsuarioAcesso, status: "aprovado" | "reprovado") => {
+    try {
+      await decidirAcesso(u.id, status);
+      toast.success(
+        status === "aprovado" ? "Acesso aprovado." : "Acesso reprovado.",
+      );
+      await carregarUsuarios();
+    } catch {
+      toast.error("Não foi possível registrar a decisão de acesso.");
+    }
+  };
+
   const [enviando, setEnviando] = useState(false);
   const [submetidas, setSubmetidas] = useState<Record<string, boolean>>(() => {
     try {
