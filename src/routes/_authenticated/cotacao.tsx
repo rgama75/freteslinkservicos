@@ -175,6 +175,8 @@ function Index() {
     setLista(getCotacoes());
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
     void carregarSubmissoes();
+    void carregarUsuarios();
+
   }, []);
 
   const carregarSubmissoes = async () => {
