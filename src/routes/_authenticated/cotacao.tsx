@@ -858,14 +858,14 @@ function Index() {
 
                 <tbody>
                   {filtrada.map((item) => {
+                    const chaveItem = chaveSub(
+                      item.gerais.cliente,
+                      item.gerais.origem,
+                      item.gerais.destino,
+                    );
                     const statusCotacao =
-                      statusPorCotacao[
-                        chaveSub(
-                          item.gerais.cliente,
-                          item.gerais.origem,
-                          item.gerais.destino,
-                        )
-                      ] ?? "pendente";
+                      decisaoUI[chaveItem] ?? statusPorCotacao[chaveItem] ?? "pendente";
+
                     const statusColorClass =
                       statusCotacao === "aprovada"
                         ? "text-success"
