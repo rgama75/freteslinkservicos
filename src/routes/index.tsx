@@ -154,10 +154,11 @@ function LoginPage() {
       return;
     }
     if (!data.session) {
-      toast.success("Conta criada! Confirme seu e-mail para acessar.");
+      toast.success("Conta criada! O acesso será liberado após aprovação do administrador.");
       setModo("login");
       return;
     }
+    toast.success("Conta criada! Aguarde a aprovação do administrador.");
     irParaDestino();
   }
 

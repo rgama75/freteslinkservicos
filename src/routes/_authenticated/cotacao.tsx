@@ -2,7 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2, X } from "lucide-react";
+import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2, UserCheck, X } from "lucide-react";
+import { decidirAcesso, listarUsuarios, type UsuarioAcesso } from "@/lib/acessos";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
@@ -125,6 +127,30 @@ function Index() {
   const [email, setEmail] = useState<string | null>(null);
   const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
+  const [usuariosModalOpen, setUsuariosModalOpen] = useState(false);
+  const [usuarios, setUsuarios] = useState<UsuarioAcesso[]>([]);
+  const usuariosPendentes = usuarios.filter((u) => u.access_status === "pendente").length;
+
+  const carregarUsuarios = async () => {
+    try {
+      setUsuarios(await listarUsuarios());
+    } catch {
+      /* sem permissão */
+    }
+  };
+
+  const decidirUsuario = async (u: UsuarioAcesso, status: "aprovado" | "reprovado") => {
+    try {
+      await decidirAcesso(u.id, status);
+      toast.success(
+        status === "aprovado" ? "Acesso aprovado." : "Acesso reprovado.",
+      );
+      await carregarUsuarios();
+    } catch {
+      toast.error("Não foi possível registrar a decisão de acesso.");
+    }
+  };
+
   const [enviando, setEnviando] = useState(false);
   const [submetidas, setSubmetidas] = useState<Record<string, boolean>>(() => {
     try {
@@ -149,6 +175,8 @@ function Index() {
     setLista(getCotacoes());
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
     void carregarSubmissoes();
+    void carregarUsuarios();
+
   }, []);
 
   const carregarSubmissoes = async () => {
@@ -610,17 +638,35 @@ function Index() {
 
 
             {isApprover && (
-              <button
-                type="button"
-                onClick={() => {
-                  setAprovModalOpen(true);
-                  void carregarSubmissoes();
-                }}
-                className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground"
-              >
-                <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Cotações para Aprovação
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAprovModalOpen(true);
+                    void carregarSubmissoes();
+                  }}
+                  className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground"
+                >
+                  <ClipboardList className="mr-2 inline h-4 w-4 align-[-3px]" />Cotações para Aprovação
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUsuariosModalOpen(true);
+                    void carregarUsuarios();
+                  }}
+                  className="rounded-[7px] border border-navy bg-panel px-4 py-2.5 text-[13px] font-bold text-navy transition-colors hover:bg-navy hover:text-primary-foreground"
+                >
+                  <UserCheck className="mr-2 inline h-4 w-4 align-[-3px]" />Aprovação de Logins
+                  {usuariosPendentes > 0 && (
+                    <span className="ml-2 rounded-full bg-danger px-2 py-0.5 text-[11px] text-primary-foreground">
+                      {usuariosPendentes}
+                    </span>
+                  )}
+                </button>
+              </>
             )}
+
           </div>
         </Panel>
 
@@ -812,14 +858,14 @@ function Index() {
 
                 <tbody>
                   {filtrada.map((item) => {
+                    const chaveItem = chaveSub(
+                      item.gerais.cliente,
+                      item.gerais.origem,
+                      item.gerais.destino,
+                    );
                     const statusCotacao =
-                      statusPorCotacao[
-                        chaveSub(
-                          item.gerais.cliente,
-                          item.gerais.origem,
-                          item.gerais.destino,
-                        )
-                      ] ?? "pendente";
+                      decisaoUI[chaveItem] ?? statusPorCotacao[chaveItem] ?? "pendente";
+
                     const statusColorClass =
                       statusCotacao === "aprovada"
                         ? "text-success"
@@ -941,9 +987,22 @@ function Index() {
                       <td className="border-b border-line p-2">
                         {new Date(s.created_at).toLocaleString("pt-BR")}
                       </td>
-                      <td className="border-b border-line p-2 font-semibold capitalize">
-                        {decisaoUI[s.id] ?? s.status}
-                      </td>
+                      {(() => {
+                        const st = decisaoUI[s.id] ?? s.status;
+                        return (
+                          <td
+                            className={`border-b border-line p-2 font-semibold capitalize ${
+                              st === "aprovada"
+                                ? "text-success"
+                                : st === "reprovada"
+                                  ? "text-danger"
+                                  : "text-ink-soft"
+                            }`}
+                          >
+                            {st}
+                          </td>
+                        );
+                      })()}
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
@@ -961,6 +1020,75 @@ function Index() {
                         >
                           Reprovar
                         </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={usuariosModalOpen} onOpenChange={setUsuariosModalOpen}>
+        <DialogContent className="max-w-[900px]">
+          <DialogHeader>
+            <DialogTitle>Aprovação de Logins</DialogTitle>
+          </DialogHeader>
+          {usuarios.length === 0 ? (
+            <p className="text-[13px] text-ink-soft">Nenhum cadastro encontrado.</p>
+          ) : (
+            <div className="max-h-[60vh] overflow-auto">
+              <table className="w-full border-collapse text-[13px]">
+                <thead>
+                  <tr className="text-left text-ink-soft">
+                    <th className="border-b border-line p-2">E-mail</th>
+                    <th className="border-b border-line p-2">Nome</th>
+                    <th className="border-b border-line p-2">Empresa</th>
+                    <th className="border-b border-line p-2">Cadastro</th>
+                    <th className="border-b border-line p-2">Status</th>
+                    <th className="border-b border-line p-2">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {usuarios.map((u) => (
+                    <tr key={u.id} className="hover:bg-secondary">
+                      <td className="border-b border-line p-2">{u.email || "—"}</td>
+                      <td className="border-b border-line p-2">{u.full_name || "—"}</td>
+                      <td className="border-b border-line p-2">{u.company || "—"}</td>
+                      <td className="border-b border-line p-2">
+                        {new Date(u.created_at).toLocaleString("pt-BR")}
+                      </td>
+                      <td
+                        className={`border-b border-line p-2 font-semibold capitalize ${
+                          u.access_status === "aprovado"
+                            ? "text-success"
+                            : u.access_status === "reprovado"
+                              ? "text-danger"
+                              : "text-ink-soft"
+                        }`}
+                      >
+                        {u.access_status}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            disabled={u.access_status === "aprovado"}
+                            onClick={() => void decidirUsuario(u, "aprovado")}
+                            className="rounded-[6px] bg-navy px-3 py-1.5 text-[12px] font-bold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+                          >
+                            Aprovar
+                          </button>
+                          <button
+                            type="button"
+                            disabled={u.access_status === "reprovado"}
+                            onClick={() => void decidirUsuario(u, "reprovado")}
+                            className="rounded-[6px] border border-line px-3 py-1.5 text-[12px] font-bold text-danger transition-colors hover:bg-secondary disabled:opacity-40"
+                          >
+                            Reprovar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
