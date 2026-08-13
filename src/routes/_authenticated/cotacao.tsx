@@ -987,9 +987,22 @@ function Index() {
                       <td className="border-b border-line p-2">
                         {new Date(s.created_at).toLocaleString("pt-BR")}
                       </td>
-                      <td className="border-b border-line p-2 font-semibold capitalize">
-                        {decisaoUI[s.id] ?? s.status}
-                      </td>
+                      {(() => {
+                        const st = decisaoUI[s.id] ?? s.status;
+                        return (
+                          <td
+                            className={`border-b border-line p-2 font-semibold capitalize ${
+                              st === "aprovada"
+                                ? "text-success"
+                                : st === "reprovada"
+                                  ? "text-danger"
+                                  : "text-ink-soft"
+                            }`}
+                          >
+                            {st}
+                          </td>
+                        );
+                      })()}
                       <td className="border-b border-line p-2">
                         <button
                           type="button"
