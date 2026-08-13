@@ -2,7 +2,9 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2, X } from "lucide-react";
+import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2, UserCheck, X } from "lucide-react";
+import { decidirAcesso, listarUsuarios, type UsuarioAcesso } from "@/lib/acessos";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
