@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import { template as novoCadastroTemplate } from './novo-cadastro'
 
 export interface TemplateEntry {
   component: ComponentType<any>
