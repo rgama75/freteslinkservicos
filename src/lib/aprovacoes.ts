@@ -7,6 +7,8 @@ export type SubmissaoStatus = "pendente" | "aprovada" | "reprovada";
 
 export type Submissao = {
   id: string;
+  /** Id único da cotação de origem — chave que liga a submissão à cotação salva. */
+  cotacao_id: string | null;
   cliente: string;
   origem: string;
   uf_origem: string;
@@ -24,6 +26,7 @@ export async function submeterAprovacao(
   gerais: DadosGerais,
   cards: Record<number, DadosCard>,
   status: SubmissaoStatus = "pendente",
+  cotacaoId?: string | null,
 ) {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
@@ -31,6 +34,7 @@ export async function submeterAprovacao(
 
   const { error } = await supabase.from("cotacoes_aprovacao").insert({
     user_id: user.id,
+    cotacao_id: cotacaoId ?? null,
     submitted_by_email: user.email ?? null,
     cliente: gerais.cliente ?? "",
     origem: gerais.origem ?? "",
@@ -51,7 +55,7 @@ export async function listarSubmissoes(): Promise<Submissao[]> {
   const { data, error } = await supabase
     .from("cotacoes_aprovacao")
     .select(
-      "id, cliente, origem, uf_origem, destino, uf_destino, status, observacao, submitted_by_email, created_at, decided_at, dados",
+      "id, cotacao_id, cliente, origem, uf_origem, destino, uf_destino, status, observacao, submitted_by_email, created_at, decided_at, dados",
     )
     .order("created_at", { ascending: false });
   if (error) throw error;

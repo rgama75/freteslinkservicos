@@ -17,6 +17,7 @@ export type Database = {
       cotacoes_aprovacao: {
         Row: {
           cliente: string
+          cotacao_id: string | null
           created_at: string
           dados: Json
           decided_at: string | null
@@ -34,6 +35,7 @@ export type Database = {
         }
         Insert: {
           cliente?: string
+          cotacao_id?: string | null
           created_at?: string
           dados: Json
           decided_at?: string | null
@@ -51,6 +53,7 @@ export type Database = {
         }
         Update: {
           cliente?: string
+          cotacao_id?: string | null
           created_at?: string
           dados?: Json
           decided_at?: string | null
