@@ -20,6 +20,13 @@ export type Submissao = {
   dados: unknown;
 };
 
+/** Chave que identifica uma cotação por cliente/origem/destino. */
+export function chaveCotacao(cliente: string, origem: string, destino: string) {
+  return [cliente, origem, destino]
+    .map((valor) => (valor || "").trim().toLowerCase())
+    .join("|");
+}
+
 export async function submeterAprovacao(
   gerais: DadosGerais,
   cards: Record<number, DadosCard>,
@@ -56,6 +63,30 @@ export async function listarSubmissoes(): Promise<Submissao[]> {
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as Submissao[];
+}
+
+/**
+ * Status já decidido pelo aprovador ({@link APPROVER_EMAIL}) para as chaves
+ * informadas. Qualquer usuário autenticado pode consultar, de modo que a
+ * cotação salva localmente reflita a decisão do aprovador mesmo quando a
+ * submissão pertence a outra pessoa.
+ */
+export async function listarStatusAprovador(
+  chaves: string[],
+): Promise<Record<string, SubmissaoStatus>> {
+  const unicas = [...new Set(chaves.filter((c) => c && c !== "||"))];
+  if (unicas.length === 0) return {};
+
+  const { data, error } = await supabase.rpc("status_cotacoes_aprovador", {
+    _chaves: unicas,
+  });
+  if (error) throw error;
+
+  const mapa: Record<string, SubmissaoStatus> = {};
+  for (const linha of data ?? []) {
+    mapa[linha.chave] = linha.status as SubmissaoStatus;
+  }
+  return mapa;
 }
 
 export async function decidirSubmissao(id: string, status: SubmissaoStatus) {

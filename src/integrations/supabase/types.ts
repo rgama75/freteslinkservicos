@@ -140,6 +140,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      status_cotacoes_aprovador: {
+        Args: {
+          _chaves: string[]
+        }
+        Returns: {
+          chave: string
+          decided_at: string | null
+          status: string
+        }[]
+      }
     }
     Enums: {
       app_role: "approver"

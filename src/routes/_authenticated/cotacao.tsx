@@ -8,7 +8,9 @@ import { decidirAcesso, listarUsuarios, type UsuarioAcesso } from "@/lib/acessos
 import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
+  chaveCotacao,
   decidirSubmissao,
+  listarStatusAprovador,
   listarSubmissoes,
   submeterAprovacao,
   type Submissao,
@@ -187,16 +189,38 @@ function Index() {
     }
   };
 
-  const chaveSub = (cliente: string, origem: string, destino: string) =>
-    `${(cliente || "").trim().toLowerCase()}|${(origem || "").trim().toLowerCase()}|${(destino || "").trim().toLowerCase()}`;
+
+  // Status já decidido pelo aprovador (APPROVER_EMAIL), inclusive para
+  // submissões feitas por outros usuários — que a RLS esconde do usuário comum.
+  const [statusAprovador, setStatusAprovador] = useState<Record<string, string>>({});
+
+  const carregarStatusAprovador = async (itens: Cotacao[]) => {
+    const chaves = itens.map((i) =>
+      chaveCotacao(i.gerais.cliente, i.gerais.origem, i.gerais.destino),
+    );
+    chaves.push(chaveCotacao(gerais.cliente, gerais.origem, gerais.destino));
+    try {
+      setStatusAprovador(await listarStatusAprovador(chaves));
+    } catch {
+      /* sem permissão ou offline */
+    }
+  };
 
   const statusPorCotacao = useMemo(() => {
     const map: Record<string, string> = {};
     for (const s of [...submissoes].reverse()) {
-      map[chaveSub(s.cliente, s.origem, s.destino)] = s.status;
+      map[chaveCotacao(s.cliente, s.origem, s.destino)] = s.status;
     }
-    return map;
-  }, [submissoes]);
+    // A decisão do aprovador prevalece sobre o status da própria submissão.
+    return { ...map, ...statusAprovador };
+  }, [submissoes, statusAprovador]);
+
+  // Ressincroniza os status sempre que a lista muda, quando há nova submissão
+  // ou decisão, e ao abrir a tela de Cotações Salvas.
+  useEffect(() => {
+    void carregarStatusAprovador(lista);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lista, submissoes, modalOpen]);
 
   // Decisões tomadas nesta sessão (para marca d'água nos botões clicados)
   const [decisaoUI, setDecisaoUI] = useState<Record<string, "aprovada" | "reprovada">>({});
@@ -280,7 +304,7 @@ function Index() {
       setDecisaoUI((prev) => ({
         ...prev,
         [s.id]: status,
-        [chaveSub(s.cliente, s.origem, s.destino)]: status,
+        [chaveCotacao(s.cliente, s.origem, s.destino)]: status,
       }));
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
@@ -301,9 +325,9 @@ function Index() {
     }
     setEnviando(true);
     try {
-      const chave = chaveSub(g.cliente, g.origem, g.destino);
+      const chave = chaveCotacao(g.cliente, g.origem, g.destino);
       const existente = submissoes.find(
-        (s) => chaveSub(s.cliente, s.origem, s.destino) === chave,
+        (s) => chaveCotacao(s.cliente, s.origem, s.destino) === chave,
       );
       if (existente) {
         await decidirSubmissao(existente.id, status);
@@ -608,7 +632,7 @@ function Index() {
             {(() => {
               const chave = `atual:${gerais.cliente}|${gerais.origem}|${gerais.destino}`;
               const jaEnviada = !isApprover && submetidas[chave] === true;
-              const chaveA = chaveSub(gerais.cliente, gerais.origem, gerais.destino);
+              const chaveA = chaveCotacao(gerais.cliente, gerais.origem, gerais.destino);
               const aprovada =
                 isApprover && (decisaoUI[chaveA] ?? statusPorCotacao[chaveA]) === "aprovada";
               return (
@@ -768,7 +792,7 @@ function Index() {
       </footer>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-[960px]">
+        <DialogContent className="w-[96vw] max-w-[1600px]">
           <DialogHeader>
             <DialogTitle>Cotações Salvas</DialogTitle>
           </DialogHeader>
@@ -842,8 +866,8 @@ function Index() {
               Nenhuma cotação encontrada.
             </div>
           ) : (
-            <div className="max-h-[50vh] overflow-auto">
-              <table className="w-full border-collapse text-[12.5px]">
+            <div className="max-h-[60vh] overflow-auto">
+              <table className="w-full min-w-max border-collapse whitespace-nowrap text-[12.5px]">
                 <thead>
                   <tr className="text-left text-ink-soft">
                     {!isApprover && <th className="border-b-2 border-line p-2" />}
@@ -858,7 +882,7 @@ function Index() {
 
                 <tbody>
                   {filtrada.map((item) => {
-                    const chaveItem = chaveSub(
+                    const chaveItem = chaveCotacao(
                       item.gerais.cliente,
                       item.gerais.origem,
                       item.gerais.destino,
