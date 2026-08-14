@@ -15,7 +15,7 @@ export const notificarNovoCadastro = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => schema.parse(data))
   .handler(async ({ data }) => {
     const { sendTemplateEmail } = await import("@/lib/email-templates/send-email");
-    const { APPROVER_EMAIL } = await import("@/lib/aprovacoes");
+    const APPROVER_EMAIL = "rodrigo.gama@linkbr.com";
     try {
       const result = await sendTemplateEmail("novo-cadastro", APPROVER_EMAIL, {
         templateData: { nome: data.nome, email: data.email, empresa: data.empresa },
