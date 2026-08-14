@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
   decidirSubmissao,
+  idDaCotacao,
   listarSubmissoes,
   submeterAprovacao,
   type Submissao,
@@ -185,21 +186,51 @@ function Index() {
   const carregarSubmissoes = async () => {
     try {
       setSubmissoes(await listarSubmissoes());
-    } catch {
-      /* sem permissão ou offline */
+    } catch (e) {
+      // Engolir esta falha em silêncio esconde o status de todas as cotações:
+      // se a consulta falhar, o usuário precisa saber.
+      console.error("Falha ao carregar as cotações submetidas à aprovação:", e);
+      toast.error("Não foi possível carregar as cotações submetidas à aprovação.");
     }
   };
 
-  // O status é indexado pelo id único da cotação, nunca pelos dados (cliente/origem/
-  // destino): cotações com dados idênticos são registros distintos e cada uma carrega
-  // o seu próprio status.
+  const chaveDados = (cliente: string, origem: string, destino: string) =>
+    `${(cliente || "").trim().toLowerCase()}|${(origem || "").trim().toLowerCase()}|${(destino || "").trim().toLowerCase()}`;
+
+  // Status por cotação salva, sempre resolvido para uma cotação específica — nunca
+  // replicado entre cotações de dados idênticos.
   const statusPorCotacao = useMemo(() => {
     const map: Record<string, string> = {};
+
+    // 1) Submissões que carregam o id da cotação: vínculo direto e exato.
     for (const s of [...submissoes].reverse()) {
-      if (s.cotacao_id) map[s.cotacao_id] = s.status;
+      const id = idDaCotacao(s);
+      if (id) map[id] = s.status;
     }
+
+    // 2) Submissões antigas (feitas antes do id existir) não têm como ser ligadas
+    //    pelo id. Elas são emparelhadas uma-a-uma com as cotações salvas de mesmos
+    //    dados, da mais recente para a mais antiga: cada submissão entrega o seu
+    //    status a uma única cotação, então duas cotações iguais nunca acabam com o
+    //    mesmo status por engano.
+    const legado = new Map<string, string[]>();
+    for (const s of submissoes) {
+      if (idDaCotacao(s)) continue;
+      const k = chaveDados(s.cliente, s.origem, s.destino);
+      const fila = legado.get(k) ?? [];
+      fila.push(s.status);
+      legado.set(k, fila);
+    }
+    for (const item of lista) {
+      if (map[item.id]) continue;
+      const status = legado
+        .get(chaveDados(item.gerais.cliente, item.gerais.origem, item.gerais.destino))
+        ?.shift();
+      if (status) map[item.id] = status;
+    }
+
     return map;
-  }, [submissoes]);
+  }, [submissoes, lista]);
 
   // Decisões tomadas nesta sessão (para marca d'água nos botões clicados)
   const [decisaoUI, setDecisaoUI] = useState<Record<string, "aprovada" | "reprovada">>({});
@@ -278,10 +309,11 @@ function Index() {
     try {
       await decidirSubmissao(s.id, status);
       // A decisão vale só para esta submissão e para a cotação de id correspondente.
+      const idCotacao = idDaCotacao(s);
       setDecisaoUI((prev) => ({
         ...prev,
         [s.id]: status,
-        ...(s.cotacao_id ? { [s.cotacao_id]: status } : {}),
+        ...(idCotacao ? { [idCotacao]: status } : {}),
       }));
       toast.success(status === "aprovada" ? "Cotação aprovada." : "Cotação reprovada.");
       await carregarSubmissoes();
@@ -303,7 +335,7 @@ function Index() {
     setEnviando(true);
     try {
       const id = cotacaoIdAtual;
-      const existente = submissoes.find((s) => s.cotacao_id === id);
+      const existente = submissoes.find((s) => idDaCotacao(s) === id);
       if (existente) {
         await decidirSubmissao(existente.id, status);
       } else {

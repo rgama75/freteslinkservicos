@@ -7,8 +7,6 @@ export type SubmissaoStatus = "pendente" | "aprovada" | "reprovada";
 
 export type Submissao = {
   id: string;
-  /** Id único da cotação de origem — chave que liga a submissão à cotação salva. */
-  cotacao_id: string | null;
   cliente: string;
   origem: string;
   uf_origem: string;
@@ -22,6 +20,23 @@ export type Submissao = {
   dados: unknown;
 };
 
+/**
+ * Conteúdo do campo `dados` (jsonb). O `cotacaoId` é o identificador único da cotação
+ * de origem e é a chave que liga esta submissão à cotação salva. Fica dentro de `dados`
+ * de propósito: não depende de alteração de schema e viaja junto com a submissão.
+ */
+type DadosSubmissao = {
+  gerais?: DadosGerais;
+  cards?: Record<number, DadosCard>;
+  cotacaoId?: string;
+};
+
+/** Id único da cotação que originou a submissão (null nas submissões antigas). */
+export function idDaCotacao(s: Pick<Submissao, "dados">): string | null {
+  const d = s.dados as DadosSubmissao | null | undefined;
+  return typeof d?.cotacaoId === "string" && d.cotacaoId !== "" ? d.cotacaoId : null;
+}
+
 export async function submeterAprovacao(
   gerais: DadosGerais,
   cards: Record<number, DadosCard>,
@@ -34,14 +49,13 @@ export async function submeterAprovacao(
 
   const { error } = await supabase.from("cotacoes_aprovacao").insert({
     user_id: user.id,
-    cotacao_id: cotacaoId ?? null,
     submitted_by_email: user.email ?? null,
     cliente: gerais.cliente ?? "",
     origem: gerais.origem ?? "",
     uf_origem: gerais.ufOrigem ?? "",
     destino: gerais.destino ?? "",
     uf_destino: gerais.ufDestino ?? "",
-    dados: { gerais, cards } as never,
+    dados: { gerais, cards, cotacaoId: cotacaoId ?? null } as never,
     status,
     ...(status === "pendente"
       ? {}
@@ -55,7 +69,7 @@ export async function listarSubmissoes(): Promise<Submissao[]> {
   const { data, error } = await supabase
     .from("cotacoes_aprovacao")
     .select(
-      "id, cotacao_id, cliente, origem, uf_origem, destino, uf_destino, status, observacao, submitted_by_email, created_at, decided_at, dados",
+      "id, cliente, origem, uf_origem, destino, uf_destino, status, observacao, submitted_by_email, created_at, decided_at, dados",
     )
     .order("created_at", { ascending: false });
   if (error) throw error;
