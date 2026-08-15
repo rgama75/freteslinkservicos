@@ -200,13 +200,30 @@ function Index() {
 
   // Baseado em statusGeral (visível a todos os usuários) para que a decisão do
   // aprovador em uma cotação submetida por outra pessoa também apareça aqui.
+  // Uma decisão (aprovada/reprovada) sempre prevalece sobre linhas pendentes da
+  // mesma cotação, e entre decisões vale a mais recente (decided_at).
   const statusPorCotacao = useMemo(() => {
-    const map: Record<string, string> = {};
-    for (const s of [...statusGeral].reverse()) {
-      map[chaveSub(s.cliente, s.origem, s.destino)] = s.status;
+    const map: Record<string, { status: string; decidedAt: number }> = {};
+    for (const s of statusGeral) {
+      const chave = chaveSub(s.cliente, s.origem, s.destino);
+      const decidida = s.status === "aprovada" || s.status === "reprovada";
+      const decidedAt = s.decided_at ? new Date(s.decided_at).getTime() : 0;
+      const atual = map[chave];
+      if (!atual) {
+        map[chave] = { status: s.status, decidedAt };
+        continue;
+      }
+      const atualDecidida =
+        atual.status === "aprovada" || atual.status === "reprovada";
+      if (decidida && (!atualDecidida || decidedAt > atual.decidedAt)) {
+        map[chave] = { status: s.status, decidedAt };
+      }
     }
-    return map;
+    return Object.fromEntries(
+      Object.entries(map).map(([k, v]) => [k, v.status]),
+    ) as Record<string, string>;
   }, [statusGeral]);
+
 
   // Decisões tomadas nesta sessão (para marca d'água nos botões clicados)
   const [decisaoUI, setDecisaoUI] = useState<Record<string, "aprovada" | "reprovada">>({});
