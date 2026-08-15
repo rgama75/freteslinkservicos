@@ -7,6 +7,7 @@ export type SubmissaoStatus = "pendente" | "aprovada" | "reprovada";
 
 export type Submissao = {
   id: string;
+  ref_local: string | null;
   cliente: string;
   origem: string;
   uf_origem: string;
@@ -24,6 +25,7 @@ export async function submeterAprovacao(
   gerais: DadosGerais,
   cards: Record<number, DadosCard>,
   status: SubmissaoStatus = "pendente",
+  refLocal?: string,
 ) {
   const { data: userData, error: userError } = await supabase.auth.getUser();
   const user = userData.user;
@@ -32,6 +34,7 @@ export async function submeterAprovacao(
   const { error } = await supabase.from("cotacoes_aprovacao").insert({
     user_id: user.id,
     submitted_by_email: user.email ?? null,
+    ref_local: refLocal ?? null,
     cliente: gerais.cliente ?? "",
     origem: gerais.origem ?? "",
     uf_origem: gerais.ufOrigem ?? "",
@@ -51,7 +54,7 @@ export async function listarSubmissoes(): Promise<Submissao[]> {
   const { data, error } = await supabase
     .from("cotacoes_aprovacao")
     .select(
-      "id, cliente, origem, uf_origem, destino, uf_destino, status, observacao, submitted_by_email, created_at, decided_at, dados",
+      "id, ref_local, cliente, origem, uf_origem, destino, uf_destino, status, observacao, submitted_by_email, created_at, decided_at, dados",
     )
     .order("created_at", { ascending: false });
   if (error) throw error;
@@ -59,6 +62,7 @@ export async function listarSubmissoes(): Promise<Submissao[]> {
 }
 
 export type StatusCotacao = {
+  ref_local: string | null;
   cliente: string;
   origem: string;
   destino: string;
@@ -69,11 +73,12 @@ export type StatusCotacao = {
 export async function listarStatusCotacoes(): Promise<StatusCotacao[]> {
   const { data, error } = await supabase
     .from("cotacoes_status")
-    .select("cliente, origem, destino, status, decided_at")
+    .select("ref_local, cliente, origem, destino, status, decided_at")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as StatusCotacao[];
 }
+
 
 export async function decidirSubmissao(id: string, status: SubmissaoStatus) {
   const { data: userData } = await supabase.auth.getUser();
