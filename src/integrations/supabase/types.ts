@@ -141,13 +141,13 @@ export type Database = {
         Returns: boolean
       }
       listar_status_cotacoes: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           cliente: string
-          origem: string
+          decided_at: string
           destino: string
+          origem: string
           status: string
-          decided_at: string | null
         }[]
       }
     }
