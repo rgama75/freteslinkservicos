@@ -768,7 +768,7 @@ function Index() {
       </footer>
 
       <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="max-w-[960px]">
+        <DialogContent className="max-w-[1400px] w-[95vw]">
           <DialogHeader>
             <DialogTitle>Cotações Salvas</DialogTitle>
           </DialogHeader>
@@ -843,7 +843,7 @@ function Index() {
             </div>
           ) : (
             <div className="max-h-[50vh] overflow-auto">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full min-w-max border-collapse whitespace-nowrap text-[12.5px]">
                 <thead>
                   <tr className="text-left text-ink-soft">
                     {!isApprover && <th className="border-b-2 border-line p-2" />}
@@ -947,7 +947,7 @@ function Index() {
       </Dialog>
 
       <Dialog open={aprovModalOpen} onOpenChange={setAprovModalOpen}>
-        <DialogContent className="max-w-[960px]">
+        <DialogContent className="max-w-[1400px] w-[95vw]">
           <DialogHeader>
             <DialogTitle>Cotações Submetidas à Aprovação</DialogTitle>
           </DialogHeader>
@@ -957,7 +957,7 @@ function Index() {
             </div>
           ) : (
             <div className="max-h-[50vh] overflow-auto">
-              <table className="w-full border-collapse text-[12.5px]">
+              <table className="w-full min-w-max border-collapse whitespace-nowrap text-[12.5px]">
                 <thead>
                   <tr className="text-left text-ink-soft">
                     <th className="border-b-2 border-line p-2">Cliente</th>
@@ -1031,7 +1031,7 @@ function Index() {
       </Dialog>
 
       <Dialog open={usuariosModalOpen} onOpenChange={setUsuariosModalOpen}>
-        <DialogContent className="max-w-[900px]">
+        <DialogContent className="max-w-[1200px] w-[95vw]">
           <DialogHeader>
             <DialogTitle>Aprovação de Logins</DialogTitle>
           </DialogHeader>
@@ -1039,7 +1039,7 @@ function Index() {
             <p className="text-[13px] text-ink-soft">Nenhum cadastro encontrado.</p>
           ) : (
             <div className="max-h-[60vh] overflow-auto">
-              <table className="w-full border-collapse text-[13px]">
+              <table className="w-full min-w-max border-collapse whitespace-nowrap text-[13px]">
                 <thead>
                   <tr className="text-left text-ink-soft">
                     <th className="border-b border-line p-2">E-mail</th>
