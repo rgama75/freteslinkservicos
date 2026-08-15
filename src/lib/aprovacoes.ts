@@ -58,6 +58,20 @@ export async function listarSubmissoes(): Promise<Submissao[]> {
   return (data ?? []) as Submissao[];
 }
 
+export type StatusCotacao = {
+  cliente: string;
+  origem: string;
+  destino: string;
+  status: string;
+  decided_at: string | null;
+};
+
+export async function listarStatusCotacoes(): Promise<StatusCotacao[]> {
+  const { data, error } = await supabase.rpc("listar_status_cotacoes");
+  if (error) throw error;
+  return (data ?? []) as StatusCotacao[];
+}
+
 export async function decidirSubmissao(id: string, status: SubmissaoStatus) {
   const { data: userData } = await supabase.auth.getUser();
   const { error } = await supabase
