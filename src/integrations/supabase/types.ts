@@ -25,6 +25,7 @@ export type Database = {
           id: string
           observacao: string | null
           origem: string
+          ref_local: string | null
           status: string
           submitted_by_email: string | null
           uf_destino: string
@@ -42,6 +43,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           origem?: string
+          ref_local?: string | null
           status?: string
           submitted_by_email?: string | null
           uf_destino?: string
@@ -59,6 +61,7 @@ export type Database = {
           id?: string
           observacao?: string | null
           origem?: string
+          ref_local?: string | null
           status?: string
           submitted_by_email?: string | null
           uf_destino?: string
@@ -76,6 +79,7 @@ export type Database = {
           decided_at: string | null
           destino: string
           origem: string
+          ref_local: string | null
           status: string
         }
         Insert: {
@@ -85,6 +89,7 @@ export type Database = {
           decided_at?: string | null
           destino?: string
           origem?: string
+          ref_local?: string | null
           status?: string
         }
         Update: {
@@ -94,6 +99,7 @@ export type Database = {
           decided_at?: string | null
           destino?: string
           origem?: string
+          ref_local?: string | null
           status?: string
         }
         Relationships: [
