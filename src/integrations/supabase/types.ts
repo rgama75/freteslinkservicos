@@ -140,16 +140,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      listar_status_cotacoes: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          cliente: string
-          origem: string
-          destino: string
-          status: string
-          decided_at: string | null
-        }[]
-      }
     }
     Enums: {
       app_role: "approver"
