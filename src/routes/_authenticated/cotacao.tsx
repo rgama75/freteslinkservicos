@@ -9,8 +9,10 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   APPROVER_EMAIL,
   decidirSubmissao,
+  listarStatusCotacoes,
   listarSubmissoes,
   submeterAprovacao,
+  type StatusCotacao,
   type Submissao,
 } from "@/lib/aprovacoes";
 
@@ -126,6 +128,7 @@ function Index() {
 
   const [email, setEmail] = useState<string | null>(null);
   const [submissoes, setSubmissoes] = useState<Submissao[]>([]);
+  const [statusGeral, setStatusGeral] = useState<StatusCotacao[]>([]);
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
   const [usuariosModalOpen, setUsuariosModalOpen] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioAcesso[]>([]);
@@ -185,18 +188,25 @@ function Index() {
     } catch {
       /* sem permissão ou offline */
     }
+    try {
+      setStatusGeral(await listarStatusCotacoes());
+    } catch {
+      /* sem permissão ou offline */
+    }
   };
 
   const chaveSub = (cliente: string, origem: string, destino: string) =>
     `${(cliente || "").trim().toLowerCase()}|${(origem || "").trim().toLowerCase()}|${(destino || "").trim().toLowerCase()}`;
 
+  // Baseado em statusGeral (visível a todos os usuários) para que a decisão do
+  // aprovador em uma cotação submetida por outra pessoa também apareça aqui.
   const statusPorCotacao = useMemo(() => {
     const map: Record<string, string> = {};
-    for (const s of [...submissoes].reverse()) {
+    for (const s of [...statusGeral].reverse()) {
       map[chaveSub(s.cliente, s.origem, s.destino)] = s.status;
     }
     return map;
-  }, [submissoes]);
+  }, [statusGeral]);
 
   // Decisões tomadas nesta sessão (para marca d'água nos botões clicados)
   const [decisaoUI, setDecisaoUI] = useState<Record<string, "aprovada" | "reprovada">>({});
