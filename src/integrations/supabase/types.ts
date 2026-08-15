@@ -68,6 +68,44 @@ export type Database = {
         }
         Relationships: []
       }
+      cotacoes_status: {
+        Row: {
+          cliente: string
+          cotacao_id: string
+          created_at: string
+          decided_at: string | null
+          destino: string
+          origem: string
+          status: string
+        }
+        Insert: {
+          cliente?: string
+          cotacao_id: string
+          created_at?: string
+          decided_at?: string | null
+          destino?: string
+          origem?: string
+          status?: string
+        }
+        Update: {
+          cliente?: string
+          cotacao_id?: string
+          created_at?: string
+          decided_at?: string | null
+          destino?: string
+          origem?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotacoes_status_cotacao_id_fkey"
+            columns: ["cotacao_id"]
+            isOneToOne: true
+            referencedRelation: "cotacoes_aprovacao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           access_decided_at: string | null
@@ -139,16 +177,6 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
-      }
-      listar_status_cotacoes: {
-        Args: never
-        Returns: {
-          cliente: string
-          decided_at: string
-          destino: string
-          origem: string
-          status: string
-        }[]
       }
     }
     Enums: {
