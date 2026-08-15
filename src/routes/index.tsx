@@ -153,13 +153,6 @@ function LoginPage() {
       );
       return;
     }
-    void notificarNovoCadastro({
-      data: {
-        nome: parsed.data.nome,
-        email: parsed.data.email,
-        empresa: parsed.data.empresa,
-      },
-    }).catch(() => undefined);
     if (!data.session) {
       toast.success("Conta criada! O acesso será liberado após aprovação do administrador.");
       setModo("login");
