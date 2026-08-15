@@ -6,7 +6,6 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable/index";
 import logoAsset from "@/assets/logo-link.png.asset.json";
-import { notificarNovoCadastro } from "@/lib/notificacoes.functions";
 
 function destinoSeguro(next: unknown): string | null {
   if (typeof next !== "string" || !next.startsWith("/") || next.startsWith("//"))
@@ -154,13 +153,6 @@ function LoginPage() {
       );
       return;
     }
-    void notificarNovoCadastro({
-      data: {
-        nome: parsed.data.nome,
-        email: parsed.data.email,
-        empresa: parsed.data.empresa,
-      },
-    }).catch(() => undefined);
     if (!data.session) {
       toast.success("Conta criada! O acesso será liberado após aprovação do administrador.");
       setModo("login");
