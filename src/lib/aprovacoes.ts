@@ -67,7 +67,10 @@ export type StatusCotacao = {
 };
 
 export async function listarStatusCotacoes(): Promise<StatusCotacao[]> {
-  const { data, error } = await supabase.rpc("listar_status_cotacoes");
+  const { data, error } = await supabase
+    .from("cotacoes_status")
+    .select("cliente, origem, destino, status, decided_at")
+    .order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []) as StatusCotacao[];
 }
