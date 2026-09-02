@@ -3,11 +3,17 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Check, ClipboardList, LogOut, Plus, Save, Send, Trash2, UserCheck, X } from "lucide-react";
-import { decidirAcesso, listarUsuarios, type UsuarioAcesso } from "@/lib/acessos";
+import {
+  decidirAcesso,
+  listarAdministradores,
+  listarUsuarios,
+  souAdministrador,
+  tornarAdministrador,
+  type UsuarioAcesso,
+} from "@/lib/acessos";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
-  APPROVER_EMAIL,
   decidirSubmissao,
   listarStatusCotacoes,
   listarSubmissoes,
@@ -132,6 +138,7 @@ function Index() {
   const [aprovModalOpen, setAprovModalOpen] = useState(false);
   const [usuariosModalOpen, setUsuariosModalOpen] = useState(false);
   const [usuarios, setUsuarios] = useState<UsuarioAcesso[]>([]);
+  const [administradores, setAdministradores] = useState<string[]>([]);
   const usuariosPendentes = usuarios.filter((u) => u.access_status === "pendente").length;
 
   const carregarUsuarios = async () => {
@@ -139,6 +146,21 @@ function Index() {
       setUsuarios(await listarUsuarios());
     } catch {
       /* sem permissão */
+    }
+    try {
+      setAdministradores(await listarAdministradores());
+    } catch {
+      /* sem permissão */
+    }
+  };
+
+  const tornarUsuarioAdministrador = async (u: UsuarioAcesso) => {
+    try {
+      await tornarAdministrador(u.id);
+      toast.success(`${u.full_name || u.email} agora é administrador.`);
+      await carregarUsuarios();
+    } catch {
+      toast.error("Não foi possível conceder o papel de administrador.");
     }
   };
 
@@ -172,11 +194,12 @@ function Index() {
   }, [submetidas]);
 
 
-  const isApprover = (email ?? "").toLowerCase() === APPROVER_EMAIL;
+  const [isApprover, setIsApprover] = useState(false);
 
   useEffect(() => {
     setLista(getCotacoes());
     supabase.auth.getUser().then(({ data }) => setEmail(data.user?.email ?? null));
+    void souAdministrador().then(setIsApprover);
     void carregarSubmissoes();
     void carregarUsuarios();
 
@@ -251,7 +274,7 @@ function Index() {
       toast.success(
         isApprover
           ? "Cotação enviada para o fluxo de aprovação (pendente)."
-          : `Cotação submetida à aprovação de ${APPROVER_EMAIL}.`,
+          : "Cotação submetida à aprovação de um administrador.",
       );
       await carregarSubmissoes();
     } catch {
@@ -284,7 +307,7 @@ function Index() {
         }
       }
       if (ok > 0) {
-        toast.success(`${ok} cotação(ões) submetida(s) à aprovação de ${APPROVER_EMAIL}.`);
+        toast.success(`${ok} cotação(ões) submetida(s) à aprovação de um administrador.`);
         setSelecionados({});
         await carregarSubmissoes();
       } else {
@@ -1074,11 +1097,14 @@ function Index() {
                     <th className="border-b border-line p-2">Empresa</th>
                     <th className="border-b border-line p-2">Cadastro</th>
                     <th className="border-b border-line p-2">Status</th>
+                    <th className="border-b border-line p-2">Administrador</th>
                     <th className="border-b border-line p-2">Ações</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {usuarios.map((u) => (
+                  {usuarios.map((u) => {
+                    const jaAdmin = administradores.includes(u.id);
+                    return (
                     <tr key={u.id} className="hover:bg-secondary">
                       <td className="border-b border-line p-2">{u.email || "—"}</td>
                       <td className="border-b border-line p-2">{u.full_name || "—"}</td>
@@ -1096,6 +1122,19 @@ function Index() {
                         }`}
                       >
                         {u.access_status}
+                      </td>
+                      <td className="border-b border-line p-2">
+                        {jaAdmin ? (
+                          <span className="font-semibold text-success">Sim</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => void tornarUsuarioAdministrador(u)}
+                            className="rounded-[6px] border border-line px-3 py-1.5 text-[12px] font-bold text-ink transition-colors hover:bg-secondary"
+                          >
+                            Tornar administrador
+                          </button>
+                        )}
                       </td>
                       <td className="border-b border-line p-2">
                         <div className="flex gap-2">
@@ -1118,7 +1157,7 @@ function Index() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );})}
                 </tbody>
               </table>
             </div>
