@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { Clock, ShieldX, LogOut } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { meuAcesso, type AcessoStatus } from "@/lib/acessos";
-import { APPROVER_EMAIL } from "@/lib/aprovacoes";
 import logoAsset from "@/assets/logo-link.png.asset.json";
 
 export const Route = createFileRoute("/aguardando-aprovacao")({
@@ -92,8 +91,8 @@ function AguardandoPage() {
           </h2>
           <p className="mt-2 text-[13px] leading-relaxed text-ink-soft">
             {reprovado
-              ? `Seu acesso foi reprovado. Entre em contato com ${APPROVER_EMAIL} para mais informações.`
-              : `Seu cadastro foi criado e precisa ser aprovado por ${APPROVER_EMAIL}. Você receberá o acesso assim que a aprovação for registrada.`}
+              ? "Seu acesso foi reprovado. Entre em contato com um administrador para mais informações."
+              : "Seu cadastro foi criado e precisa ser aprovado por um administrador. Você receberá o acesso assim que a aprovação for registrada."}
           </p>
           <button
             type="button"

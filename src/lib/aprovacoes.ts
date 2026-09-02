@@ -1,8 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { DadosCard, DadosGerais } from "@/lib/pricing";
 
-export const APPROVER_EMAIL = "rodrigo.gama@linkbr.com";
-
 export type SubmissaoStatus = "pendente" | "aprovada" | "reprovada";
 
 export type Submissao = {

@@ -46,3 +46,30 @@ export async function decidirAcesso(id: string, status: AcessoStatus) {
     .eq("id", id);
   if (error) throw error;
 }
+
+/** Se o usuário logado tem o papel de administrador (aprovador). */
+export async function souAdministrador(): Promise<boolean> {
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return false;
+  const { data, error } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userData.user.id)
+    .eq("role", "approver")
+    .maybeSingle();
+  if (error) return false;
+  return data != null;
+}
+
+/** IDs de todos os usuários que já são administradores (só visível para administradores). */
+export async function listarAdministradores(): Promise<string[]> {
+  const { data, error } = await supabase.from("user_roles").select("user_id").eq("role", "approver");
+  if (error) throw error;
+  return (data ?? []).map((r) => r.user_id as string);
+}
+
+/** Concede o papel de administrador a um usuário (só um administrador pode conceder). */
+export async function tornarAdministrador(userId: string) {
+  const { error } = await supabase.from("user_roles").insert({ user_id: userId, role: "approver" });
+  if (error) throw error;
+}
